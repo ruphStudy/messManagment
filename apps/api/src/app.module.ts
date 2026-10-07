@@ -13,6 +13,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { StudentsModule } from './modules/students/students.module';
 import { MealPlansModule } from './modules/meal-plans/meal-plans.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
+import { MenusModule } from './modules/menus/menus.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { SubscriptionsModule } from './modules/subscriptions/subscriptions.modul
     StudentsModule,
     MealPlansModule,
     SubscriptionsModule,
+    MenusModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -123,6 +123,7 @@ model Mess {
   students      MessStudent[]
   mealPlans     MealPlan[]
   subscriptions StudentSubscription[]
+  menus         DailyMenu[]
 
   @@index([ownerId])
   @@map("messes")
@@ -279,4 +280,31 @@ model StudentSubscription {
   @@index([studentId, startDate])
   @@index([mealPlanId])
   @@map("student_subscriptions")
+}
+
+/// The menu of one mess for one calendar date (Indian date). Informational only: it never reserves or deducts meals.
+model DailyMenu {
+  id                 String    @id @default(uuid()) @db.Uuid
+  messId             String    @db.Uuid
+  menuDate           DateTime  @db.Date
+  breakfastItems     String[]
+  lunchItems         String[]
+  dinnerItems        String[]
+  breakfastAvailable Boolean   @default(true)
+  lunchAvailable     Boolean   @default(true)
+  dinnerAvailable    Boolean   @default(true)
+  breakfastNote      String?   @db.VarChar(200)
+  lunchNote          String?   @db.VarChar(200)
+  dinnerNote         String?   @db.VarChar(200)
+  generalNote        String?   @db.VarChar(300)
+  isPublished        Boolean   @default(false)
+  publishedAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  mess Mess @relation(fields: [messId], references: [id], onDelete: Cascade)
+
+  @@unique([messId, menuDate])
+  @@index([messId, isPublished, menuDate])
+  @@map("daily_menus")
 }

@@ -48,6 +48,9 @@ export const Permission = {
   SUBSCRIPTION_MANAGE: 'subscription:manage',
   /** Cancel subscriptions, including immediate plan changes (which cancel the current one). */
   SUBSCRIPTION_CANCEL: 'subscription:cancel',
+  MENU_VIEW: 'menu:view',
+  /** Create, edit, copy, publish/unpublish menus. */
+  MENU_MANAGE: 'menu:manage',
   STUDENT_SELF: 'student:self',
 } as const;
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -68,6 +71,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.SUBSCRIPTION_VIEW,
     Permission.SUBSCRIPTION_MANAGE,
     Permission.SUBSCRIPTION_CANCEL,
+    Permission.MENU_VIEW,
+    Permission.MENU_MANAGE,
   ],
   MESS_MANAGER: [
     Permission.MESS_VIEW,
@@ -79,8 +84,16 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.MEAL_PLAN_MANAGE,
     Permission.SUBSCRIPTION_VIEW,
     Permission.SUBSCRIPTION_MANAGE,
+    Permission.MENU_VIEW,
+    Permission.MENU_MANAGE,
   ],
-  MESS_STAFF: [Permission.MESS_VIEW, Permission.STUDENT_VIEW, Permission.MEAL_PLAN_VIEW, Permission.SUBSCRIPTION_VIEW],
+  MESS_STAFF: [
+    Permission.MESS_VIEW,
+    Permission.STUDENT_VIEW,
+    Permission.MEAL_PLAN_VIEW,
+    Permission.SUBSCRIPTION_VIEW,
+    Permission.MENU_VIEW,
+  ],
   STUDENT: [Permission.STUDENT_SELF],
 };
 

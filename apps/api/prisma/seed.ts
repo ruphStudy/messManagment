@@ -4,7 +4,7 @@
  * All accounts use the password "Password123". Do not run against production.
  */
 import { PlanDurationType, PrismaClient, Role, type Mess, type MessStudent } from '@prisma/client';
-import { businessToday, calculateEndDate } from '@mess/shared';
+import { addDays, businessToday, calculateEndDate } from '@mess/shared';
 import { hashPassword } from '../src/modules/auth/crypto.util';
 
 const prisma = new PrismaClient();
@@ -55,6 +55,31 @@ async function seedSubscription(mess: Mess, student: MessStudent | null, plan: A
       remainingMealCredits: plan.mealCredits,
     },
   });
+}
+
+/** Published menus for today and tomorrow, unless the mess already has them. */
+async function seedMenus(mess: Mess) {
+  const menus = [
+    {
+      breakfastItems: ['Poha', 'Tea'],
+      lunchItems: ['Chapati', 'Dal Tadka', 'Jeera Rice', 'Cabbage Sabji', 'Salad'],
+      dinnerItems: ['Chapati', 'Paneer Butter Masala', 'Rice', 'Dal'],
+    },
+    {
+      breakfastItems: ['Upma', 'Tea'],
+      lunchItems: ['Chapati', 'Rajma', 'Rice', 'Salad'],
+      dinnerItems: ['Chapati', 'Mix Veg', 'Dal Khichdi'],
+      generalNote: 'Sunday special dinner at 8 PM',
+    },
+  ];
+  for (const [i, menu] of menus.entries()) {
+    const menuDate = new Date(`${addDays(businessToday(), i)}T00:00:00Z`);
+    await prisma.dailyMenu.upsert({
+      where: { messId_menuDate: { messId: mess.id, menuDate } },
+      update: {},
+      create: { ...menu, messId: mess.id, menuDate, isPublished: true, publishedAt: new Date() },
+    });
+  }
 }
 
 async function main() {
@@ -137,6 +162,9 @@ async function main() {
   await seedSubscription(mess, await prisma.messStudent.findFirst({ where: { messId: mess.id, mobile: '9100000001' } }), plans[2]);
   const otherPlan = await seedPlan(otherMess, PLANS[0]);
   await seedSubscription(otherMess, await prisma.messStudent.findFirst({ where: { messId: otherMess.id, mobile: '9100000099' } }), otherPlan);
+
+  await seedMenus(mess);
+  await seedMenus(otherMess);
 
   console.log(`Seeded "${mess.name}" and "${otherMess.name}". Logins (password ${PASSWORD}):`);
   console.log('  9000000001 owner, 9000000002 manager, 9000000003 staff, 9000000011 owner of second mess');

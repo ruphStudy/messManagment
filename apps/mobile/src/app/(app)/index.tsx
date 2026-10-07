@@ -6,10 +6,12 @@ import { Card, Screen } from '@/components/layout';
 import { NotLinkedCard } from '@/components/not-linked';
 import { ErrorState, FullScreenLoader } from '@/components/states';
 import { SubscriptionCard } from '@/components/subscription-card';
+import { TodayMenuPreview } from '@/components/today-menu-preview';
 import { AppText } from '@/components/text';
 import { useAuth } from '@/lib/auth';
 import { formatDate, useStudentProfile } from '@/lib/student-profile';
 import { useMySubscription } from '@/lib/use-my-subscription';
+import { useStudentMenu } from '@/lib/use-student-menu';
 import { colors, spacing, TOUCH_TARGET } from '@/theme/tokens';
 
 function PlanSection({ data, error, reload }: Pick<ReturnType<typeof useMySubscription>, 'data' | 'error' | 'reload'>) {
@@ -46,6 +48,7 @@ export default function HomeScreen() {
   const { session } = useAuth();
   const profileState = useStudentProfile();
   const subscription = useMySubscription();
+  const todayMenu = useStudentMenu('today');
   const { data, loading, error } = profileState;
 
   if (!data && loading) return <FullScreenLoader />;
@@ -55,6 +58,7 @@ export default function HomeScreen() {
   const refresh = () => {
     void profileState.reload();
     void subscription.reload();
+    void todayMenu.reload();
   };
 
   return (
@@ -77,6 +81,7 @@ export default function HomeScreen() {
               </AppText>
             </Card>
           )}
+          <TodayMenuPreview data={todayMenu.data} />
           <PlanSection data={subscription.data} error={subscription.error} reload={subscription.reload} />
         </>
       ) : (
