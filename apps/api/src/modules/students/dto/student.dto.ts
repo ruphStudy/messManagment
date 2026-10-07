@@ -1,8 +1,7 @@
 import { PartialType, PickType } from '@nestjs/swagger';
 import { applyDecorators } from '@nestjs/common';
-import { IsIn, IsISO8601, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { IsIn, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 import {
-  DATE_REGEX,
   EMAIL_REGEX,
   LIMITS,
   MESSAGES,
@@ -18,10 +17,8 @@ import {
   type ToggleableStudentStatus,
 } from '@mess/shared';
 import { PaginationQueryDto } from '../../../common/http/pagination';
+import { IsDateOnly, OptionalText } from '../../../common/http/validators';
 import { EmptyToNull, NormalizeMobile, NormalizeOptionalMobile, Trim, TrimLower } from '../../../common/http/transforms';
-
-/** Optional free text: blank becomes null so fields can be cleared. */
-const OptionalText = (max: number) => applyDecorators(IsOptional(), EmptyToNull(), IsString(), MaxLength(max));
 
 const OptionalMobile = () =>
   applyDecorators(IsOptional(), NormalizeOptionalMobile(), Matches(MOBILE_REGEX, { message: MESSAGES.mobile }));
@@ -72,9 +69,7 @@ export class CreateStudentDto implements StudentInput {
   emergencyContactMobile: string | null;
 
   /** YYYY-MM-DD */
-  @Trim()
-  @Matches(DATE_REGEX, { message: MESSAGES.date })
-  @IsISO8601({ strict: true }, { message: MESSAGES.date })
+  @IsDateOnly()
   joiningDate: string;
 
   @OptionalText(LIMITS.notesMax)

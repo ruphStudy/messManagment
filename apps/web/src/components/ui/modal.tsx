@@ -30,7 +30,7 @@ export function Modal({ open, onClose, title, description, children, footer }: M
       onClose={onClose}
       onClick={(e) => e.target === ref.current && onClose()}
       aria-labelledby="modal-title"
-      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-card bg-surface p-0 text-ink shadow-xl backdrop:bg-slate-900/40"
+      className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-card bg-surface p-0 text-ink shadow-xl backdrop:bg-slate-900/40"
     >
       <div className="p-5 sm:p-6">
         <div className="flex items-start justify-between gap-4">

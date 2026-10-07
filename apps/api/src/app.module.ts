@@ -11,6 +11,8 @@ import { HealthController } from './modules/health/health.controller';
 import { MessModule } from './modules/mess/mess.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { StudentsModule } from './modules/students/students.module';
+import { MealPlansModule } from './modules/meal-plans/meal-plans.module';
+import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { StudentsModule } from './modules/students/students.module';
     AuthModule,
     MessModule,
     StudentsModule,
+    MealPlansModule,
+    SubscriptionsModule,
   ],
   controllers: [HealthController],
   providers: [

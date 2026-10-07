@@ -17,3 +17,10 @@ export function formatMobile(mobile: string) {
 export function fullName(person: { firstName: string; lastName: string | null }) {
   return [person.firstName, person.lastName].filter(Boolean).join(' ');
 }
+
+const priceFormat = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2, minimumFractionDigits: 0 });
+
+/** 3300 → "₹3,300"; 1800.5 → "₹1,800.5" */
+export function formatPrice(rupees: number) {
+  return priceFormat.format(rupees);
+}

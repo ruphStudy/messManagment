@@ -1,9 +1,6 @@
 import type { Mess, MessStudent, User } from '@prisma/client';
 import type { StudentDetail, StudentListItem, StudentSelfProfile } from '@mess/shared';
-
-/** DB stores joiningDate as DATE; the API uses YYYY-MM-DD strings. */
-export const toDateString = (date: Date) => date.toISOString().slice(0, 10);
-export const fromDateString = (value: string) => new Date(`${value}T00:00:00.000Z`);
+import { toDateString } from '../../common/http/dates';
 
 export const studentListSelect = {
   id: true,

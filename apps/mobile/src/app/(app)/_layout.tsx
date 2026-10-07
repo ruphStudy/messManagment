@@ -1,5 +1,6 @@
 import type { ComponentProps } from 'react';
-import { Tabs } from 'expo-router';
+import { Pressable } from 'react-native';
+import { router, Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StudentProfileProvider } from '@/lib/student-profile';
 import { colors } from '@/theme/tokens';
@@ -35,6 +36,19 @@ export default function AppTabsLayout() {
           options={{ title, tabBarIcon: ({ color, size }) => <Ionicons name={icon} color={color} size={size} /> }}
         />
       ))}
+      {/* Not a tab: opened from Home / Profile. */}
+      <Tabs.Screen
+        name="plans"
+        options={{
+          href: null,
+          title: 'Plan history',
+          headerLeft: () => (
+            <Pressable onPress={() => router.back()} accessibilityLabel="Back" hitSlop={12} style={{ paddingHorizontal: 16 }}>
+              <Ionicons name="arrow-back" size={24} color={colors.ink} />
+            </Pressable>
+          ),
+        }}
+      />
     </Tabs>
     </StudentProfileProvider>
   );

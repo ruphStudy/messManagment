@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
 import { DEFAULT_COUNTRY_CODE, STUDENT_STATUS_LABELS, type StudentSelfProfile } from '@mess/shared';
 import { Button } from '@/components/button';
 import { Card, Screen } from '@/components/layout';
@@ -119,6 +120,7 @@ export default function ProfileScreen() {
         <LinkedProfile profile={profile} onEdit={() => setEditing(true)} />
       )}
 
+      {profile && !editing && <Button title="Plan history" variant="secondary" onPress={() => router.push('/plans')} />}
       {!editing && <Button title="Sign out" variant="secondary" onPress={confirmLogout} loading={loggingOut} />}
     </Screen>
   );

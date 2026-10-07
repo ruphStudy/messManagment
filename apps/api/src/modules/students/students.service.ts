@@ -15,8 +15,8 @@ import { AppException } from '../../common/http/app.exception';
 import { Paginated } from '../../common/http/pagination';
 import { CreateStudentDto, ListStudentsQueryDto, UpdateStudentDto, UpdateStudentSelfDto } from './dto/student.dto';
 import { StudentLinkService } from './student-link.service';
+import { fromDateString } from '../../common/http/dates';
 import {
-  fromDateString,
   studentListSelect,
   toStudentDetail,
   toStudentListItem,
@@ -135,9 +135,14 @@ export class StudentsService {
 
   /** The signed-in student's own record. Links pending records first, so a just-added student appears immediately. */
   async getSelf(user: User): Promise<StudentMeResponse> {
-    await this.linker.linkUser(user);
-    const student = await this.findSelf(user.id);
+    const student = await this.resolveSelf(user);
     return student ? { linked: true, profile: toStudentSelfProfile(student) } : { linked: false };
+  }
+
+  /** Links pending records, then returns the student's own record (or null). Used by other student self-service modules. */
+  async resolveSelf(user: User) {
+    await this.linker.linkUser(user);
+    return this.findSelf(user.id);
   }
 
   async updateSelf(user: User, dto: UpdateStudentSelfDto): Promise<StudentSelfProfile> {

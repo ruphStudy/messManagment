@@ -3,7 +3,8 @@
  * plus a second mess (for tenant-isolation checks).
  * All accounts use the password "Password123". Do not run against production.
  */
-import { PrismaClient, Role } from '@prisma/client';
+import { PlanDurationType, PrismaClient, Role, type Mess, type MessStudent } from '@prisma/client';
+import { businessToday, calculateEndDate } from '@mess/shared';
 import { hashPassword } from '../src/modules/auth/crypto.util';
 
 const prisma = new PrismaClient();
@@ -15,6 +16,44 @@ async function upsertUser(mobile: string, email: string, firstName: string, last
     where: { mobile },
     update: {},
     create: { mobile, email, firstName, lastName, role, passwordHash, mobileVerified: true },
+  });
+}
+
+const PLANS = [
+  { name: 'Lunch Only', pricePaise: 180000, lunchIncluded: true, dinnerIncluded: false, mealCredits: null },
+  { name: 'Dinner Only', pricePaise: 180000, lunchIncluded: false, dinnerIncluded: true, mealCredits: null },
+  { name: 'Lunch + Dinner', pricePaise: 330000, lunchIncluded: true, dinnerIncluded: true, mealCredits: null },
+  { name: '30 Meals Pack', pricePaise: 210000, lunchIncluded: true, dinnerIncluded: true, mealCredits: 30 },
+];
+
+async function seedPlan(mess: Mess, plan: (typeof PLANS)[number]) {
+  return (
+    (await prisma.mealPlan.findFirst({ where: { messId: mess.id, name: plan.name } })) ??
+    (await prisma.mealPlan.create({
+      data: { ...plan, messId: mess.id, durationType: PlanDurationType.MONTHS, durationValue: 1 },
+    }))
+  );
+}
+
+/** Gives the student a plan starting today unless they already have one. */
+async function seedSubscription(mess: Mess, student: MessStudent | null, plan: Awaited<ReturnType<typeof seedPlan>>) {
+  if (!student || (await prisma.studentSubscription.count({ where: { studentId: student.id } }))) return;
+  const start = businessToday();
+  await prisma.studentSubscription.create({
+    data: {
+      messId: mess.id,
+      studentId: student.id,
+      mealPlanId: plan.id,
+      planName: plan.name,
+      planPricePaise: plan.pricePaise,
+      breakfastIncluded: plan.breakfastIncluded,
+      lunchIncluded: plan.lunchIncluded,
+      dinnerIncluded: plan.dinnerIncluded,
+      startDate: new Date(`${start}T00:00:00Z`),
+      endDate: new Date(`${calculateEndDate(start, plan.durationType, plan.durationValue)}T00:00:00Z`),
+      totalMealCredits: plan.mealCredits,
+      remainingMealCredits: plan.mealCredits,
+    },
   });
 }
 
@@ -92,6 +131,12 @@ async function main() {
     update: {},
     create: { messId: otherMess.id, firstName: 'Neha', lastName: 'Rao', mobile: '9100000099', joiningDate: new Date('2026-08-01T00:00:00Z') },
   });
+
+  const plans = [];
+  for (const plan of PLANS) plans.push(await seedPlan(mess, plan));
+  await seedSubscription(mess, await prisma.messStudent.findFirst({ where: { messId: mess.id, mobile: '9100000001' } }), plans[2]);
+  const otherPlan = await seedPlan(otherMess, PLANS[0]);
+  await seedSubscription(otherMess, await prisma.messStudent.findFirst({ where: { messId: otherMess.id, mobile: '9100000099' } }), otherPlan);
 
   console.log(`Seeded "${mess.name}" and "${otherMess.name}". Logins (password ${PASSWORD}):`);
   console.log('  9000000001 owner, 9000000002 manager, 9000000003 staff, 9000000011 owner of second mess');

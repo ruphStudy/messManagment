@@ -37,6 +37,22 @@ enum StudentStatus {
   ARCHIVED
 }
 
+enum MealPlanStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PlanDurationType {
+  DAYS
+  MONTHS
+}
+
+enum SubscriptionKind {
+  NEW
+  RENEWAL
+  PLAN_CHANGE
+}
+
 enum MessType {
   STUDENT_MESS
   PG_HOSTEL
@@ -102,9 +118,11 @@ model Mess {
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
-  owner       User             @relation("MessOwner", fields: [ownerId], references: [id])
-  memberships MessMembership[]
-  students    MessStudent[]
+  owner         User                  @relation("MessOwner", fields: [ownerId], references: [id])
+  memberships   MessMembership[]
+  students      MessStudent[]
+  mealPlans     MealPlan[]
+  subscriptions StudentSubscription[]
 
   @@index([ownerId])
   @@map("messes")
@@ -192,8 +210,9 @@ model MessStudent {
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
 
-  mess Mess  @relation(fields: [messId], references: [id], onDelete: Cascade)
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  mess          Mess                  @relation(fields: [messId], references: [id], onDelete: Cascade)
+  user          User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+  subscriptions StudentSubscription[]
 
   /// One record per person per mess (archived records are restored, not duplicated).
   @@unique([messId, mobile])
@@ -202,4 +221,62 @@ model MessStudent {
   @@index([mobile])
   @@index([userId])
   @@map("mess_students")
+}
+
+/// A reusable plan configuration offered by a mess. Never deleted once used; deactivate instead.
+model MealPlan {
+  id                String           @id @default(uuid()) @db.Uuid
+  messId            String           @db.Uuid
+  name              String           @db.VarChar(80)
+  description       String?          @db.VarChar(300)
+  /// Price in paise
+  pricePaise        Int
+  breakfastIncluded Boolean          @default(false)
+  lunchIncluded     Boolean          @default(false)
+  dinnerIncluded    Boolean          @default(false)
+  durationType      PlanDurationType
+  durationValue     Int
+  /// Meals in a limited package; null = unlimited within validity
+  mealCredits       Int?
+  status            MealPlanStatus   @default(ACTIVE)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  mess          Mess                  @relation(fields: [messId], references: [id], onDelete: Cascade)
+  subscriptions StudentSubscription[]
+
+  @@index([messId, status])
+  @@map("meal_plans")
+}
+
+/// A dated assignment of a plan to a student. Plan details are snapshotted so later plan edits never rewrite history.
+/// Status is derived from dates (UPCOMING / ACTIVE / EXPIRED); only cancellation is stored.
+model StudentSubscription {
+  id                   String           @id @default(uuid()) @db.Uuid
+  messId               String           @db.Uuid
+  studentId            String           @db.Uuid
+  mealPlanId           String?          @db.Uuid
+  kind                 SubscriptionKind @default(NEW)
+  planName             String           @db.VarChar(80)
+  planPricePaise       Int
+  breakfastIncluded    Boolean
+  lunchIncluded        Boolean
+  dinnerIncluded       Boolean
+  startDate            DateTime         @db.Date
+  endDate              DateTime         @db.Date
+  totalMealCredits     Int?
+  remainingMealCredits Int?
+  cancelledAt          DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  mess     Mess        @relation(fields: [messId], references: [id], onDelete: Cascade)
+  student  MessStudent @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  mealPlan MealPlan?   @relation(fields: [mealPlanId], references: [id], onDelete: SetNull)
+
+  @@index([messId, endDate])
+  @@index([messId, startDate])
+  @@index([studentId, startDate])
+  @@index([mealPlanId])
+  @@map("student_subscriptions")
 }

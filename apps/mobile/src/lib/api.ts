@@ -1,4 +1,4 @@
-import { API_PREFIX, CLIENT_HEADER, ClientType, ErrorCode, type ApiErrorBody, type AuthResponse } from '@mess/shared';
+import { API_PREFIX, CLIENT_HEADER, ClientType, ErrorCode, type ApiErrorBody, type ApiSuccess, type AuthResponse } from '@mess/shared';
 import { tokenStorage } from './token-storage';
 
 const BASE_URL = `${process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4100'}${API_PREFIX}`;
@@ -38,7 +38,7 @@ interface RequestOptions {
   auth?: boolean;
 }
 
-async function send<T>(path: string, { method = 'GET', body, auth = true }: RequestOptions): Promise<T> {
+async function send<T>(path: string, { method = 'GET', body, auth = true }: RequestOptions): Promise<ApiSuccess<T>> {
   const headers: Record<string, string> = { Accept: 'application/json', [CLIENT_HEADER]: ClientType.MOBILE };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (auth && accessToken) headers.Authorization = `Bearer ${accessToken}`;
@@ -59,14 +59,14 @@ async function send<T>(path: string, { method = 'GET', body, auth = true }: Requ
     clearTimeout(timer);
   }
 
-  if (res.status === 204) return undefined as T;
+  if (res.status === 204) return { data: undefined as T };
   const json = await res.json().catch(() => null);
   if (!res.ok) {
     const error = (json as ApiErrorBody | null)?.error;
     if (!error && res.status >= 500) throw new ApiError(res.status, NETWORK_ERROR, 'The server is not responding. Please try again.');
     throw new ApiError(res.status, error?.code ?? ErrorCode.INTERNAL_ERROR, error?.message ?? 'Something went wrong', error?.fields);
   }
-  return (json as { data: T }).data;
+  return json as ApiSuccess<T>;
 }
 
 /** Stores tokens from a login/refresh response. */
@@ -86,7 +86,7 @@ export function refreshSession(): Promise<AuthResponse | null> {
     const refreshToken = await tokenStorage.get();
     if (!refreshToken) return null;
     try {
-      const res = await send<AuthResponse>('/auth/refresh', { method: 'POST', body: { refreshToken }, auth: false });
+      const { data: res } = await send<AuthResponse>('/auth/refresh', { method: 'POST', body: { refreshToken }, auth: false });
       await storeSession(res);
       return res;
     } catch (error) {
@@ -102,7 +102,13 @@ export function refreshSession(): Promise<AuthResponse | null> {
   return refreshInFlight;
 }
 
+/** Returns the response `data`. */
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  return (await apiEnvelope<T>(path, options)).data;
+}
+
+/** Returns `{ data, meta }` — use for paginated lists. */
+export async function apiEnvelope<T>(path: string, options: RequestOptions = {}): Promise<ApiSuccess<T>> {
   try {
     return await send<T>(path, options);
   } catch (error) {

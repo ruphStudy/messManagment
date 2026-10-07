@@ -3,37 +3,46 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, Circle } from 'lucide-react';
-import { Role, type StudentListItem } from '@mess/shared';
-import { apiEnvelope } from '@/lib/api';
+import { Role, type MealPlan } from '@mess/shared';
+import { api, apiEnvelope } from '@/lib/api';
 import { Card, CardHeader } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
 import { useAuth } from '@/lib/auth/auth-context';
 
-function useStudentCount() {
-  const [count, setCount] = useState<number | null>(null);
+interface SetupCounts {
+  students: number;
+  plans: number;
+  subscriptions: number;
+}
+
+/** Small counts for the setup checklist (one row per list is enough to read the total). */
+function useSetupCounts() {
+  const [counts, setCounts] = useState<SetupCounts | null>(null);
   useEffect(() => {
-    apiEnvelope<StudentListItem[]>('/students?pageSize=1')
-      .then((res) => setCount(res.meta?.total ?? 0))
-      .catch(() => setCount(null));
+    const total = (path: string) => apiEnvelope<unknown[]>(path).then((res) => res.meta?.total ?? 0);
+    Promise.all([total('/students?pageSize=1'), api<MealPlan[]>('/meal-plans?status=ACTIVE'), total('/subscriptions?pageSize=1')])
+      .then(([students, plans, subscriptions]) => setCounts({ students, plans: plans.length, subscriptions }))
+      .catch(() => setCounts(null));
   }, []);
-  return count;
+  return counts;
 }
 
 export default function DashboardPage() {
   const { session } = useAuth();
-  const studentCount = useStudentCount();
+  const counts = useSetupCounts();
   if (!session?.membership) return null;
 
   const CHECKLIST = [
     { label: 'Create your account', done: true },
     { label: 'Set up your mess profile', done: true, href: '/settings' },
+    { label: 'Add your students', done: !!counts?.students, href: '/students', note: counts?.students ? `${counts.students} added` : undefined },
+    { label: 'Create meal plans', done: !!counts?.plans, href: '/meal-plans', note: counts?.plans ? `${counts.plans} active` : undefined },
     {
-      label: 'Add your students',
-      done: !!studentCount,
-      href: '/students',
-      note: studentCount ? `${studentCount} added` : undefined,
+      label: 'Assign plans to students',
+      done: !!counts?.subscriptions,
+      href: '/subscriptions',
+      note: counts?.subscriptions ? `${counts.subscriptions} assigned` : undefined,
     },
-    { label: 'Create meal plans', done: false, note: 'Coming soon' },
     { label: 'Publish your weekly menu', done: false, note: 'Coming soon' },
   ];
   const isOwner = session.role === Role.MESS_OWNER;

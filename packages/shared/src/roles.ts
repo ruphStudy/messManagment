@@ -40,6 +40,14 @@ export const Permission = {
   STUDENT_IMPORT: 'student:import',
   /** Archive and restore students. */
   STUDENT_ARCHIVE: 'student:archive',
+  MEAL_PLAN_VIEW: 'meal-plan:view',
+  /** Create, edit, activate/deactivate meal plans. */
+  MEAL_PLAN_MANAGE: 'meal-plan:manage',
+  SUBSCRIPTION_VIEW: 'subscription:view',
+  /** Assign, renew and schedule plan changes. */
+  SUBSCRIPTION_MANAGE: 'subscription:manage',
+  /** Cancel subscriptions, including immediate plan changes (which cancel the current one). */
+  SUBSCRIPTION_CANCEL: 'subscription:cancel',
   STUDENT_SELF: 'student:self',
 } as const;
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -55,9 +63,24 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.STUDENT_MANAGE,
     Permission.STUDENT_IMPORT,
     Permission.STUDENT_ARCHIVE,
+    Permission.MEAL_PLAN_VIEW,
+    Permission.MEAL_PLAN_MANAGE,
+    Permission.SUBSCRIPTION_VIEW,
+    Permission.SUBSCRIPTION_MANAGE,
+    Permission.SUBSCRIPTION_CANCEL,
   ],
-  MESS_MANAGER: [Permission.MESS_VIEW, Permission.MESS_UPDATE, Permission.STUDENT_VIEW, Permission.STUDENT_MANAGE, Permission.STUDENT_IMPORT],
-  MESS_STAFF: [Permission.MESS_VIEW, Permission.STUDENT_VIEW],
+  MESS_MANAGER: [
+    Permission.MESS_VIEW,
+    Permission.MESS_UPDATE,
+    Permission.STUDENT_VIEW,
+    Permission.STUDENT_MANAGE,
+    Permission.STUDENT_IMPORT,
+    Permission.MEAL_PLAN_VIEW,
+    Permission.MEAL_PLAN_MANAGE,
+    Permission.SUBSCRIPTION_VIEW,
+    Permission.SUBSCRIPTION_MANAGE,
+  ],
+  MESS_STAFF: [Permission.MESS_VIEW, Permission.STUDENT_VIEW, Permission.MEAL_PLAN_VIEW, Permission.SUBSCRIPTION_VIEW],
   STUDENT: [Permission.STUDENT_SELF],
 };
 
