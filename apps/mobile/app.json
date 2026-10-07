@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "MessMate",
+    "slug": "messmate",
+    "scheme": "messmate",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": { "supportsTablet": false, "bundleIdentifier": "com.messmate.student" },
+    "android": { "package": "com.messmate.student", "softwareKeyboardLayoutMode": "pan" },
+    "plugins": ["expo-router", "expo-secure-store"],
+    "experiments": { "typedRoutes": true }
+  }
+}

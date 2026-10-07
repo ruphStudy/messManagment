@@ -1,0 +1,20 @@
+{
+  "name": "mess-management",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "build:shared": "pnpm --filter @mess/shared build",
+    "dev:api": "pnpm --filter @mess/api start:dev",
+    "dev:web": "pnpm --filter @mess/web dev",
+    "dev:mobile": "pnpm --filter @mess/mobile start",
+    "db:migrate": "pnpm --filter @mess/api prisma:migrate",
+    "db:seed": "pnpm --filter @mess/api prisma:seed",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "build": "pnpm -r build"
+  }
+}

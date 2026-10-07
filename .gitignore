@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.next/
+.expo/
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local
+!.env.example
+coverage/
+.DS_Store
+ios/
+android/
+next-env.d.ts
+expo-env.d.ts
