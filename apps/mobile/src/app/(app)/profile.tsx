@@ -1,28 +1,83 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
-import { DEFAULT_COUNTRY_CODE, ROLE_LABELS } from '@mess/shared';
+import { DEFAULT_COUNTRY_CODE, STUDENT_STATUS_LABELS, type StudentSelfProfile } from '@mess/shared';
 import { Button } from '@/components/button';
 import { Card, Screen } from '@/components/layout';
+import { NotLinkedCard } from '@/components/not-linked';
+import { ProfileEditForm } from '@/components/profile-edit-form';
+import { ErrorState, FullScreenLoader } from '@/components/states';
 import { AppText } from '@/components/text';
 import { useToast } from '@/components/toast';
-import { displayName, useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/auth';
+import { formatDate, studentName, useStudentProfile } from '@/lib/student-profile';
 import { colors, spacing } from '@/theme/tokens';
 
-function Row({ label, value }: { label: string; value: string }) {
+const phone = (mobile: string) => `${DEFAULT_COUNTRY_CODE} ${mobile}`;
+
+function Row({ label, value }: { label: string; value: string | null }) {
   return (
     <View style={styles.row}>
       <AppText muted>{label}</AppText>
-      <AppText style={styles.value}>{value}</AppText>
+      <AppText style={[styles.value, !value && { color: colors.placeholder, fontWeight: '400' }]}>{value || 'Not added'}</AppText>
     </View>
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <Card>
+      <AppText variant="label" muted>
+        {title.toUpperCase()}
+      </AppText>
+      {children}
+    </Card>
+  );
+}
+
+function LinkedProfile({ profile, onEdit }: { profile: StudentSelfProfile; onEdit: () => void }) {
+  const hasFamily = profile.parentName || profile.parentMobile || profile.emergencyContactName || profile.emergencyContactMobile;
+  return (
+    <>
+      <Section title="Mess">
+        <Row label="Mess" value={profile.mess.name} />
+        <Row label="Joined" value={formatDate(profile.joiningDate)} />
+        <Row label="Status" value={STUDENT_STATUS_LABELS[profile.status]} />
+        <Row label="Mess contact" value={phone(profile.mess.mobile)} />
+      </Section>
+      <Section title="Your details">
+        <Row label="Mobile" value={phone(profile.mobile)} />
+        <Row label="Email" value={profile.email} />
+        <Row label="College" value={profile.collegeName} />
+        <Row label="Course" value={profile.courseName} />
+        <Row label="Hostel / PG" value={profile.hostelOrPg} />
+        <Row label="Address" value={profile.localAddress} />
+        <Button title="Edit details" variant="secondary" onPress={onEdit} style={{ marginTop: spacing.sm }} />
+      </Section>
+      {hasFamily && (
+        <Section title="Family & emergency">
+          <Row label="Parent" value={profile.parentName} />
+          <Row label="Parent mobile" value={profile.parentMobile && phone(profile.parentMobile)} />
+          <Row label="Emergency contact" value={profile.emergencyContactName} />
+          <Row label="Emergency mobile" value={profile.emergencyContactMobile && phone(profile.emergencyContactMobile)} />
+        </Section>
+      )}
+    </>
   );
 }
 
 export default function ProfileScreen() {
   const { session, logout } = useAuth();
+  const { data, loading, error, reload, update } = useStudentProfile();
   const toast = useToast();
+  const [editing, setEditing] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+
   if (!session) return null;
-  const { user } = session;
+  if (!data && loading) return <FullScreenLoader />;
+  if (!data) return <ErrorState title="Couldn't load your profile" description={error ?? undefined} onRetry={reload} />;
+
+  const profile = data.linked ? data.profile : null;
+  const name = profile ? studentName(profile) : phone(session.user.mobile);
 
   const confirmLogout = () =>
     Alert.alert('Sign out?', 'You will need your mobile number and a code to sign in again.', [
@@ -38,29 +93,39 @@ export default function ProfileScreen() {
     ]);
 
   return (
-    <Screen edges={[]}>
+    <Screen edges={[]} onRefresh={editing ? undefined : reload} refreshing={loading}>
       <View style={styles.header}>
         <View style={styles.avatar}>
           <AppText variant="title" style={{ color: colors.brand700 }}>
-            {(user.firstName[0] ?? '#').toUpperCase()}
+            {(profile?.firstName[0] ?? '#').toUpperCase()}
           </AppText>
         </View>
-        <AppText variant="title">{displayName(session)}</AppText>
+        <AppText variant="title">{name}</AppText>
       </View>
 
-      <Card>
-        <Row label="Mobile" value={`${DEFAULT_COUNTRY_CODE} ${user.mobile}`} />
-        <Row label="Account" value={ROLE_LABELS[session.role]} />
-        <Row label="Mess" value={session.membership?.mess.name ?? 'Not linked yet'} />
-      </Card>
+      {!profile ? (
+        <NotLinkedCard mobile={session.user.mobile} />
+      ) : editing ? (
+        <ProfileEditForm
+          profile={profile}
+          onCancel={() => setEditing(false)}
+          onSave={async (input) => {
+            await update(input);
+            setEditing(false);
+            toast.show('Profile updated', 'success');
+          }}
+        />
+      ) : (
+        <LinkedProfile profile={profile} onEdit={() => setEditing(true)} />
+      )}
 
-      <Button title="Sign out" variant="secondary" onPress={confirmLogout} loading={loggingOut} />
+      {!editing && <Button title="Sign out" variant="secondary" onPress={confirmLogout} loading={loggingOut} />}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { alignItems: 'center', gap: spacing.sm, marginVertical: spacing.lg },
+  header: { alignItems: 'center', gap: spacing.sm, marginVertical: spacing.md },
   avatar: {
     width: 72,
     height: 72,

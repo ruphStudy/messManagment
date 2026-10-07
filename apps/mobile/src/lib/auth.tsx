@@ -85,9 +85,3 @@ export function useAuth() {
   return ctx;
 }
 
-/** Display name with a sensible fallback for students who have not been added by a mess yet. */
-export function displayName(session: AuthContext | null) {
-  const user = session?.user;
-  if (!user) return '';
-  return [user.firstName, user.lastName].filter(Boolean).join(' ') || `+91 ${user.mobile}`;
-}

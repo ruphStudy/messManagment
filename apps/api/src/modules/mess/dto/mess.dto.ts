@@ -12,7 +12,7 @@ import {
   PINCODE_REGEX,
   TIME_REGEX,
 } from '@mess/shared';
-import { EmptyToNull, Trim, TrimLower } from '../../../common/http/transforms';
+import { EmptyToNull, NormalizeMobile, Trim, TrimLower } from '../../../common/http/transforms';
 
 export class CreateMessDto implements MessInput {
   @Trim()
@@ -21,7 +21,7 @@ export class CreateMessDto implements MessInput {
   @MaxLength(LIMITS.messNameMax)
   name: string;
 
-  @Trim()
+  @NormalizeMobile()
   @Matches(MOBILE_REGEX, { message: MESSAGES.mobile })
   mobile: string;
 

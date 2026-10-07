@@ -1,4 +1,4 @@
-import { API_PREFIX, type ApiErrorBody, type AuthResponse, ErrorCode } from '@mess/shared';
+import { API_PREFIX, type ApiErrorBody, type ApiSuccess, type AuthResponse, ErrorCode } from '@mess/shared';
 
 export const NETWORK_ERROR = 'NETWORK_ERROR';
 
@@ -36,11 +36,13 @@ interface RequestOptions {
   body?: unknown;
   /** Attach the access token and transparently refresh on 401. Default true. */
   auth?: boolean;
+  signal?: AbortSignal;
 }
 
-async function send<T>(path: string, { method = 'GET', body, auth = true }: RequestOptions): Promise<T> {
+async function send<T>(path: string, { method = 'GET', body, auth = true, signal }: RequestOptions): Promise<ApiSuccess<T>> {
+  const isForm = body instanceof FormData;
   const headers: Record<string, string> = { Accept: 'application/json' };
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
   if (auth && accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
   let res: Response;
@@ -48,14 +50,16 @@ async function send<T>(path: string, { method = 'GET', body, auth = true }: Requ
     res = await fetch(`${API_PREFIX}${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
       credentials: 'same-origin',
+      signal,
     });
-  } catch {
+  } catch (error) {
+    if (signal?.aborted) throw error;
     throw new ApiError(0, NETWORK_ERROR, 'Cannot reach the server. Check your internet connection and try again.');
   }
 
-  if (res.status === 204) return undefined as T;
+  if (res.status === 204) return { data: undefined as T };
   const json = await res.json().catch(() => null);
   if (!res.ok) {
     const error = (json as ApiErrorBody | null)?.error;
@@ -64,13 +68,13 @@ async function send<T>(path: string, { method = 'GET', body, auth = true }: Requ
     }
     throw new ApiError(res.status, error?.code ?? ErrorCode.INTERNAL_ERROR, error?.message ?? 'Something went wrong', error?.fields);
   }
-  return (json as { data: T }).data;
+  return json as ApiSuccess<T>;
 }
 
 /** Exchanges the refresh cookie for a new access token. Concurrent callers share one request. */
 export function refreshSession(): Promise<AuthResponse | null> {
   refreshInFlight ??= send<AuthResponse>('/auth/refresh', { method: 'POST', auth: false })
-    .then((res) => {
+    .then(({ data: res }) => {
       setAccessToken(res.accessToken);
       return res;
     })
@@ -87,7 +91,13 @@ export function refreshSession(): Promise<AuthResponse | null> {
   return refreshInFlight;
 }
 
+/** Returns the response `data`. */
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  return (await apiEnvelope<T>(path, options)).data;
+}
+
+/** Returns `{ data, meta }` — use for paginated lists. */
+export async function apiEnvelope<T>(path: string, options: RequestOptions = {}): Promise<ApiSuccess<T>> {
   try {
     return await send<T>(path, options);
   } catch (error) {
@@ -101,6 +111,10 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
     }
     return send<T>(path, options);
   }
+}
+
+export function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === 'AbortError';
 }
 
 /** User-facing message for any thrown value. */

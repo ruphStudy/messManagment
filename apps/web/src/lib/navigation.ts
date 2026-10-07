@@ -26,7 +26,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, permission: Permission.MESS_VIEW },
-  { label: 'Students', href: '/students', icon: Users, soon: true },
+  { label: 'Students', href: '/students', icon: Users, permission: Permission.STUDENT_VIEW },
   { label: 'Meal Plans', href: '/meal-plans', icon: ClipboardList, soon: true },
   { label: 'Menu', href: '/menu', icon: UtensilsCrossed, soon: true },
   { label: 'Attendance', href: '/attendance', icon: CalendarCheck, soon: true },

@@ -1,6 +1,7 @@
 import type { ComponentProps } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { StudentProfileProvider } from '@/lib/student-profile';
 import { colors } from '@/theme/tokens';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -16,6 +17,7 @@ const TABS: { name: string; title: string; icon: IconName }[] = [
 
 export default function AppTabsLayout() {
   return (
+    <StudentProfileProvider>
     <Tabs
       screenOptions={{
         headerShadowVisible: false,
@@ -34,5 +36,6 @@ export default function AppTabsLayout() {
         />
       ))}
     </Tabs>
+    </StudentProfileProvider>
   );
 }

@@ -34,15 +34,30 @@ export const Permission = {
   MESS_VIEW: 'mess:view',
   MESS_UPDATE: 'mess:update',
   STAFF_MANAGE: 'staff:manage',
+  STUDENT_VIEW: 'student:view',
+  /** Create, edit, activate/deactivate students. */
+  STUDENT_MANAGE: 'student:manage',
+  STUDENT_IMPORT: 'student:import',
+  /** Archive and restore students. */
+  STUDENT_ARCHIVE: 'student:archive',
   STUDENT_SELF: 'student:self',
 } as const;
 export type Permission = (typeof Permission)[keyof typeof Permission];
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   PLATFORM_ADMIN: [],
-  MESS_OWNER: [Permission.MESS_CREATE, Permission.MESS_VIEW, Permission.MESS_UPDATE, Permission.STAFF_MANAGE],
-  MESS_MANAGER: [Permission.MESS_VIEW, Permission.MESS_UPDATE],
-  MESS_STAFF: [Permission.MESS_VIEW],
+  MESS_OWNER: [
+    Permission.MESS_CREATE,
+    Permission.MESS_VIEW,
+    Permission.MESS_UPDATE,
+    Permission.STAFF_MANAGE,
+    Permission.STUDENT_VIEW,
+    Permission.STUDENT_MANAGE,
+    Permission.STUDENT_IMPORT,
+    Permission.STUDENT_ARCHIVE,
+  ],
+  MESS_MANAGER: [Permission.MESS_VIEW, Permission.MESS_UPDATE, Permission.STUDENT_VIEW, Permission.STUDENT_MANAGE, Permission.STUDENT_IMPORT],
+  MESS_STAFF: [Permission.MESS_VIEW, Permission.STUDENT_VIEW],
   STUDENT: [Permission.STUDENT_SELF],
 };
 

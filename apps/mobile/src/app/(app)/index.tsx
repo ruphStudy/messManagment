@@ -1,34 +1,56 @@
 import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { STUDENT_STATUS_LABELS, StudentStatus } from '@mess/shared';
 import { Card, Screen } from '@/components/layout';
+import { NotLinkedCard } from '@/components/not-linked';
+import { ErrorState, FullScreenLoader } from '@/components/states';
 import { AppText } from '@/components/text';
-import { displayName, useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/auth';
+import { formatDate, useStudentProfile } from '@/lib/student-profile';
 import { colors, spacing } from '@/theme/tokens';
 
 export default function HomeScreen() {
   const { session } = useAuth();
-  const messName = session?.membership?.mess.name;
+  const { data, loading, error, reload } = useStudentProfile();
+
+  if (!data && loading) return <FullScreenLoader />;
+  if (!data) return <ErrorState title="Couldn't load your details" description={error ?? undefined} onRetry={reload} />;
+
+  const profile = data.linked ? data.profile : null;
 
   return (
-    <Screen edges={[]}>
+    <Screen edges={[]} onRefresh={reload} refreshing={loading}>
       <View style={styles.greeting}>
-        <AppText variant="display">Welcome!</AppText>
-        <AppText muted>{displayName(session)}</AppText>
+        <AppText variant="display">{profile ? `Hi, ${profile.firstName}!` : 'Welcome!'}</AppText>
+        {profile && <AppText muted>{profile.mess.name}</AppText>}
       </View>
 
-      <Card>
-        <View style={styles.row}>
-          <Ionicons name={messName ? 'storefront-outline' : 'time-outline'} size={24} color={colors.brand600} />
-          <AppText variant="title" style={styles.flex}>
-            {messName ?? 'Waiting for your mess'}
-          </AppText>
-        </View>
-        <AppText muted>
-          {messName
-            ? 'Your mess features will appear here soon.'
-            : 'Once your mess owner adds your number, your subscription, menu and QR will appear here.'}
-        </AppText>
-      </Card>
+      {profile ? (
+        <>
+          <Card>
+            <View style={styles.row}>
+              <Ionicons name="storefront-outline" size={24} color={colors.brand600} />
+              <AppText variant="title" style={styles.flex}>
+                {profile.mess.name}
+              </AppText>
+            </View>
+            <AppText muted>
+              Member since {formatDate(profile.joiningDate)} · {STUDENT_STATUS_LABELS[profile.status]}
+            </AppText>
+            {profile.status === StudentStatus.INACTIVE && (
+              <AppText variant="caption" style={{ color: colors.danger }}>
+                Your membership is inactive. Please contact your mess.
+              </AppText>
+            )}
+          </Card>
+          <Card>
+            <AppText variant="label">Coming soon</AppText>
+            <AppText muted>Your meal plan, menu and QR will appear here.</AppText>
+          </Card>
+        </>
+      ) : (
+        <NotLinkedCard mobile={session?.user.mobile ?? ''} />
+      )}
     </Screen>
   );
 }

@@ -1,12 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
-import { AuthResponse, ErrorCode, isEmailIdentifier, Role, WEB_ROLES } from '@mess/shared';
+import { AuthResponse, ErrorCode, isEmailIdentifier, normalizeMobile, Role, WEB_ROLES } from '@mess/shared';
 import { APP_CONFIG, AppConfig } from '../../config/app-config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AppException } from '../../common/http/app.exception';
 import { toAuthContext, toAuthUser } from '../users/user.mapper';
 import { AuthContextService } from './auth-context.service';
 import { DUMMY_PASSWORD_HASH, hashPassword, verifyPassword } from './crypto.util';
+import { StudentLinkService } from '../students/student-link.service';
 import { OtpService } from './otp.service';
 import { IssuedSession, SessionMeta, SessionService } from './session.service';
 import { LoginDto, RegisterOwnerDto } from './dto/auth.dto';
@@ -25,6 +26,7 @@ export class AuthService {
     private readonly sessions: SessionService,
     private readonly authContext: AuthContextService,
     private readonly otp: OtpService,
+    private readonly studentLinker: StudentLinkService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
@@ -60,7 +62,9 @@ export class AuthService {
 
   /** Password login for owners, managers and staff (web). */
   async login(dto: LoginDto, meta: Omit<SessionMeta, 'persistent'>): Promise<AuthResult> {
-    const identifier = isEmailIdentifier(dto.identifier) ? { email: dto.identifier.toLowerCase() } : { mobile: dto.identifier };
+    const identifier = isEmailIdentifier(dto.identifier)
+      ? { email: dto.identifier.toLowerCase() }
+      : { mobile: normalizeMobile(dto.identifier) ?? dto.identifier };
     const user = await this.prisma.user.findUnique({ where: identifier });
 
     const valid = await verifyPassword(dto.password, user?.passwordHash ?? (await DUMMY_PASSWORD_HASH));
@@ -97,6 +101,7 @@ export class AuthService {
     const user = existing
       ? await this.prisma.user.update({ where: { id: existing.id }, data: { mobileVerified: true } })
       : await this.prisma.user.create({ data: { firstName: '', mobile, role: Role.STUDENT, mobileVerified: true } });
+    await this.studentLinker.linkUser(user);
 
     return this.startSession(user, { ...meta, persistent: true });
   }

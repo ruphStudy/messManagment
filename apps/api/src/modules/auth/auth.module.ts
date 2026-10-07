@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { APP_CONFIG, AppConfig } from '../../config/app-config';
+import { StudentsModule } from '../students/students.module';
 import { AuthContextService } from './auth-context.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -10,6 +11,7 @@ import { ConsoleSmsProvider, SMS_PROVIDER } from './sms/sms.provider';
 
 @Module({
   imports: [
+    StudentsModule,
     JwtModule.registerAsync({
       global: true,
       inject: [APP_CONFIG],

@@ -10,6 +10,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { HealthController } from './modules/health/health.controller';
 import { MessModule } from './modules/mess/mess.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { StudentsModule } from './modules/students/students.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { PrismaModule } from './prisma/prisma.module';
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 120 }]),
     AuthModule,
     MessModule,
+    StudentsModule,
   ],
   controllers: [HealthController],
   providers: [

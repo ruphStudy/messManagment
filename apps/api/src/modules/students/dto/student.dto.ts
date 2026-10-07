@@ -1,0 +1,110 @@
+import { PartialType, PickType } from '@nestjs/swagger';
+import { applyDecorators } from '@nestjs/common';
+import { IsIn, IsISO8601, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import {
+  DATE_REGEX,
+  EMAIL_REGEX,
+  LIMITS,
+  MESSAGES,
+  MOBILE_REGEX,
+  STUDENT_SELF_EDITABLE,
+  STUDENT_SORT_FIELDS,
+  StudentStatus,
+  TOGGLEABLE_STUDENT_STATUSES,
+  type SortOrder,
+  type StudentInput,
+  type StudentListQuery,
+  type StudentSortField,
+  type ToggleableStudentStatus,
+} from '@mess/shared';
+import { PaginationQueryDto } from '../../../common/http/pagination';
+import { EmptyToNull, NormalizeMobile, NormalizeOptionalMobile, Trim, TrimLower } from '../../../common/http/transforms';
+
+/** Optional free text: blank becomes null so fields can be cleared. */
+const OptionalText = (max: number) => applyDecorators(IsOptional(), EmptyToNull(), IsString(), MaxLength(max));
+
+const OptionalMobile = () =>
+  applyDecorators(IsOptional(), NormalizeOptionalMobile(), Matches(MOBILE_REGEX, { message: MESSAGES.mobile }));
+
+export class CreateStudentDto implements StudentInput {
+  @Trim()
+  @IsString()
+  @IsNotEmpty({ message: 'First name is required' })
+  @MaxLength(LIMITS.nameMax)
+  firstName: string;
+
+  @OptionalText(LIMITS.nameMax)
+  lastName: string | null;
+
+  @NormalizeMobile()
+  @Matches(MOBILE_REGEX, { message: MESSAGES.mobile })
+  mobile: string;
+
+  @IsOptional()
+  @TrimLower()
+  @EmptyToNull()
+  @MaxLength(LIMITS.emailMax)
+  @Matches(EMAIL_REGEX, { message: MESSAGES.email })
+  email: string | null;
+
+  @OptionalText(LIMITS.textMax)
+  collegeName: string | null;
+
+  @OptionalText(LIMITS.textMax)
+  courseName: string | null;
+
+  @OptionalText(LIMITS.textMax)
+  hostelOrPg: string | null;
+
+  @OptionalText(LIMITS.addressMax)
+  localAddress: string | null;
+
+  @OptionalText(LIMITS.nameMax)
+  parentName: string | null;
+
+  @OptionalMobile()
+  parentMobile: string | null;
+
+  @OptionalText(LIMITS.nameMax)
+  emergencyContactName: string | null;
+
+  @OptionalMobile()
+  emergencyContactMobile: string | null;
+
+  /** YYYY-MM-DD */
+  @Trim()
+  @Matches(DATE_REGEX, { message: MESSAGES.date })
+  @IsISO8601({ strict: true }, { message: MESSAGES.date })
+  joiningDate: string;
+
+  @OptionalText(LIMITS.notesMax)
+  notes: string | null;
+}
+
+export class UpdateStudentDto extends PartialType(CreateStudentDto) {}
+
+export class UpdateStudentSelfDto extends PartialType(PickType(CreateStudentDto, STUDENT_SELF_EDITABLE)) {}
+
+export class UpdateStudentStatusDto {
+  @IsIn(TOGGLEABLE_STUDENT_STATUSES, { message: 'Status must be ACTIVE or INACTIVE' })
+  status: ToggleableStudentStatus;
+}
+
+export class ListStudentsQueryDto extends PaginationQueryDto implements StudentListQuery {
+  @IsOptional()
+  @Trim()
+  @MaxLength(100)
+  search?: string;
+
+  @IsOptional()
+  @IsIn(Object.values(StudentStatus))
+  status?: StudentStatus;
+
+  @IsOptional()
+  @IsIn(STUDENT_SORT_FIELDS)
+  sortBy: StudentSortField = 'createdAt';
+
+  @IsOptional()
+  @IsIn(['asc', 'desc'])
+  sortOrder: SortOrder = 'desc';
+}

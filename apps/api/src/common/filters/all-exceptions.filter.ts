@@ -10,6 +10,7 @@ const STATUS_CODES: Partial<Record<number, ErrorCode>> = {
   403: ErrorCode.FORBIDDEN,
   404: ErrorCode.NOT_FOUND,
   409: ErrorCode.CONFLICT,
+  413: ErrorCode.FILE_INVALID,
   429: ErrorCode.RATE_LIMITED,
 };
 

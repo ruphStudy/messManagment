@@ -31,6 +31,12 @@ enum MembershipStatus {
   REMOVED
 }
 
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
 enum MessType {
   STUDENT_MESS
   PG_HOSTEL
@@ -64,9 +70,10 @@ model User {
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
-  ownedMesses Mess[]           @relation("MessOwner")
-  memberships MessMembership[]
-  sessions    Session[]
+  ownedMesses     Mess[]           @relation("MessOwner")
+  memberships     MessMembership[]
+  sessions        Session[]
+  studentProfiles MessStudent[]
 
   @@map("users")
 }
@@ -97,12 +104,13 @@ model Mess {
 
   owner       User             @relation("MessOwner", fields: [ownerId], references: [id])
   memberships MessMembership[]
+  students    MessStudent[]
 
   @@index([ownerId])
   @@map("messes")
 }
 
-/// Links a user to a mess with a role (owner, manager, staff, student).
+/// Links a team user (owner, manager, staff) to a mess. Students are linked through MessStudent instead.
 model MessMembership {
   id        String           @id @default(uuid()) @db.Uuid
   userId    String           @db.Uuid
@@ -156,4 +164,42 @@ model OtpChallenge {
 
   @@index([mobile, createdAt])
   @@map("otp_challenges")
+}
+
+/// A student enrolled in a mess. Belongs to the mess; the optional `user` is the platform login account.
+/// Invariant: when linked, `mobile` equals the linked user's mobile. Archiving never touches the user account.
+model MessStudent {
+  id                     String        @id @default(uuid()) @db.Uuid
+  messId                 String        @db.Uuid
+  userId                 String?       @db.Uuid
+  firstName              String        @db.VarChar(50)
+  lastName               String?       @db.VarChar(50)
+  /// Normalized 10-digit Indian mobile number
+  mobile                 String        @db.VarChar(15)
+  email                  String?       @db.VarChar(120)
+  collegeName            String?       @db.VarChar(120)
+  courseName             String?       @db.VarChar(120)
+  hostelOrPg             String?       @db.VarChar(120)
+  localAddress           String?       @db.VarChar(200)
+  parentName             String?       @db.VarChar(50)
+  parentMobile           String?       @db.VarChar(15)
+  emergencyContactName   String?       @db.VarChar(50)
+  emergencyContactMobile String?       @db.VarChar(15)
+  joiningDate            DateTime      @db.Date
+  status                 StudentStatus @default(ACTIVE)
+  notes                  String?       @db.VarChar(1000)
+  archivedAt             DateTime?
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  mess Mess  @relation(fields: [messId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  /// One record per person per mess (archived records are restored, not duplicated).
+  @@unique([messId, mobile])
+  @@unique([messId, userId])
+  @@index([messId, status, createdAt])
+  @@index([mobile])
+  @@index([userId])
+  @@map("mess_students")
 }

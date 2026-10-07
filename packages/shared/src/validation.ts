@@ -1,6 +1,8 @@
 /** Shared validation rules. The backend is authoritative; clients use these for instant feedback. */
 
 export const MOBILE_REGEX = /^[6-9]\d{9}$/;
+/** Calendar date as sent over the API: YYYY-MM-DD. */
+export const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 export const PINCODE_REGEX = /^[1-9]\d{5}$/;
 export const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -14,6 +16,8 @@ export const LIMITS = {
   emailMax: 120,
   addressMax: 200,
   cityMax: 60,
+  textMax: 120,
+  notesMax: 1000,
   passwordMin: 8,
   passwordMax: 64,
 } as const;
@@ -29,17 +33,20 @@ export const MESSAGES = {
   timeOrder: 'Closing time must be after opening time',
   otp: `Enter the ${OTP_LENGTH}-digit code`,
   mealRequired: 'Select at least one meal',
+  date: 'Enter a valid date',
 } as const;
 
 type Check = (value: string) => string | undefined;
 
 export const validators = {
   required: (v: string) => (v.trim() ? undefined : MESSAGES.required),
-  mobile: (v: string) => (MOBILE_REGEX.test(v.trim()) ? undefined : MESSAGES.mobile),
+  mobile: (v: string) => (normalizeMobile(v) ? undefined : MESSAGES.mobile),
   email: (v: string) => (EMAIL_REGEX.test(v.trim()) ? undefined : MESSAGES.email),
   optionalEmail: (v: string) => (!v.trim() || EMAIL_REGEX.test(v.trim()) ? undefined : MESSAGES.email),
   password: (v: string) => (PASSWORD_REGEX.test(v) ? undefined : MESSAGES.password),
   pincode: (v: string) => (PINCODE_REGEX.test(v.trim()) ? undefined : MESSAGES.pincode),
+  optionalMobile: (v: string) => (!v.trim() || MOBILE_REGEX.test(normalizeMobile(v) ?? '') ? undefined : MESSAGES.mobile),
+  date: (v: string) => (isValidDateString(v) ? undefined : MESSAGES.date),
   optionalTime: (v: string) => (!v || TIME_REGEX.test(v) ? undefined : MESSAGES.time),
   otp: (v: string) => (new RegExp(`^\\d{${OTP_LENGTH}}$`).test(v) ? undefined : MESSAGES.otp),
   maxLength:
@@ -65,4 +72,32 @@ export function isTimeRangeInvalid(opening?: string | null, closing?: string | n
 /** Accepts an email or a 10-digit mobile number as a login identifier. */
 export function isEmailIdentifier(identifier: string): boolean {
   return identifier.includes('@');
+}
+
+/**
+ * The single normalization rule for Indian mobile numbers, used by every app.
+ * Accepts "98765 43210", "+91 98765-43210", "919876543210", "09876543210"; returns "9876543210" or null.
+ */
+export function normalizeMobile(input: string | null | undefined): string | null {
+  if (!input) return null;
+  let digits = input.replace(/[\s\-().]/g, '');
+  if (digits.startsWith('+')) digits = digits.slice(1);
+  if (!/^\d+$/.test(digits)) return null;
+  if (digits.length === 12 && digits.startsWith('91')) digits = digits.slice(2);
+  else if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);
+  return MOBILE_REGEX.test(digits) ? digits : null;
+}
+
+/** True for a real calendar date in YYYY-MM-DD form. */
+export function isValidDateString(value: string): boolean {
+  if (!DATE_REGEX.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+/** Today's date in the user's local timezone as YYYY-MM-DD. */
+export function todayDateString(): string {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 10);
 }

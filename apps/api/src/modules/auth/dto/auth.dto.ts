@@ -11,7 +11,7 @@ import {
   RequestOtpRequest,
   VerifyOtpRequest,
 } from '@mess/shared';
-import { Trim, TrimLower } from '../../../common/http/transforms';
+import { NormalizeMobile, Trim, TrimLower } from '../../../common/http/transforms';
 
 export class RegisterOwnerDto implements RegisterOwnerRequest {
   @Trim()
@@ -26,7 +26,7 @@ export class RegisterOwnerDto implements RegisterOwnerRequest {
   @MaxLength(LIMITS.nameMax)
   lastName: string;
 
-  @Trim()
+  @NormalizeMobile()
   @Matches(MOBILE_REGEX, { message: MESSAGES.mobile })
   mobile: string;
 
@@ -59,13 +59,13 @@ export class LoginDto implements LoginRequest {
 }
 
 export class RequestOtpDto implements RequestOtpRequest {
-  @Trim()
+  @NormalizeMobile()
   @Matches(MOBILE_REGEX, { message: MESSAGES.mobile })
   mobile: string;
 }
 
 export class VerifyOtpDto implements VerifyOtpRequest {
-  @Trim()
+  @NormalizeMobile()
   @Matches(MOBILE_REGEX, { message: MESSAGES.mobile })
   mobile: string;
 

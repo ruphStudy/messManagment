@@ -1,23 +1,41 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, Circle } from 'lucide-react';
-import { Role } from '@mess/shared';
+import { Role, type StudentListItem } from '@mess/shared';
+import { apiEnvelope } from '@/lib/api';
 import { Card, CardHeader } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
 import { useAuth } from '@/lib/auth/auth-context';
 
-const CHECKLIST = [
-  { label: 'Create your account', done: true },
-  { label: 'Set up your mess profile', done: true, href: '/settings' },
-  { label: 'Add your students', done: false, note: 'Coming soon' },
-  { label: 'Create meal plans', done: false, note: 'Coming soon' },
-  { label: 'Publish your weekly menu', done: false, note: 'Coming soon' },
-];
+function useStudentCount() {
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    apiEnvelope<StudentListItem[]>('/students?pageSize=1')
+      .then((res) => setCount(res.meta?.total ?? 0))
+      .catch(() => setCount(null));
+  }, []);
+  return count;
+}
 
 export default function DashboardPage() {
   const { session } = useAuth();
+  const studentCount = useStudentCount();
   if (!session?.membership) return null;
+
+  const CHECKLIST = [
+    { label: 'Create your account', done: true },
+    { label: 'Set up your mess profile', done: true, href: '/settings' },
+    {
+      label: 'Add your students',
+      done: !!studentCount,
+      href: '/students',
+      note: studentCount ? `${studentCount} added` : undefined,
+    },
+    { label: 'Create meal plans', done: false, note: 'Coming soon' },
+    { label: 'Publish your weekly menu', done: false, note: 'Coming soon' },
+  ];
   const isOwner = session.role === Role.MESS_OWNER;
 
   return (

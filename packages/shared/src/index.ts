@@ -3,3 +3,4 @@ export * from './enums';
 export * from './validation';
 export * from './locations';
 export * from './api';
+export * from './students';
