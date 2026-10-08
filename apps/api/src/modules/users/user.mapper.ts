@@ -27,7 +27,7 @@ export function toAuthContext(auth: RequestAuth): AuthContext {
           id: membership.id,
           role: membership.role as MessRole,
           status: membership.status,
-          mess: { id: membership.mess.id, name: membership.mess.name },
+          mess: { id: membership.mess.id, name: membership.mess.name, status: membership.mess.status },
         }
       : null,
   };

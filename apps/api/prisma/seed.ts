@@ -85,6 +85,8 @@ async function seedMenus(mess: Mess) {
 async function main() {
   if (process.env.NODE_ENV === 'production') throw new Error('Refusing to seed production');
 
+  // Platform admin: no mess membership. Development credentials only (seed refuses production).
+  await upsertUser('9000000000', 'admin@demo.mess', 'Platform', 'Admin', Role.PLATFORM_ADMIN);
   const owner = await upsertUser('9000000001', 'owner@demo.mess', 'Ravi', 'Patil', Role.MESS_OWNER);
   const manager = await upsertUser('9000000002', 'manager@demo.mess', 'Sunita', 'Joshi', Role.MESS_MANAGER);
   const staff = await upsertUser('9000000003', 'staff@demo.mess', 'Amit', 'Kale', Role.MESS_STAFF);
@@ -167,6 +169,7 @@ async function main() {
   await seedMenus(otherMess);
 
   console.log(`Seeded "${mess.name}" and "${otherMess.name}". Logins (password ${PASSWORD}):`);
+  console.log('  9000000000 platform admin (/admin)');
   console.log('  9000000001 owner, 9000000002 manager, 9000000003 staff, 9000000011 owner of second mess');
 }
 

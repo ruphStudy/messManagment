@@ -23,6 +23,8 @@ export const RequirePermissions = (...permissions: Permission[]) =>
 export const RequireMess = () => applyDecorators(SetMetadata(REQUIRE_MESS_KEY, true), ApiBearerAuth());
 
 export const PlatformAdminOnly = () => Roles(Role.PLATFORM_ADMIN);
+/** Platform admin portal routes: admin role AND the explicit admin permission. No mess membership involved. */
+export const AdminOnly = () => applyDecorators(Roles(Role.PLATFORM_ADMIN), RequirePermissions(Permission.PLATFORM_ADMIN_ACCESS));
 export const OwnerOnly = () => Roles(Role.MESS_OWNER);
 export const OwnerOrManager = () => Roles(...OWNER_OR_MANAGER);
 export const MessTeam = () => Roles(...MESS_TEAM_ROLES);

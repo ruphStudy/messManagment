@@ -26,6 +26,8 @@ import { ComplaintsModule } from './modules/complaints/complaints.module';
 import { FilesModule } from './modules/files/files.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { AuditModule } from './modules/audit/audit.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -50,6 +52,8 @@ import { ReportsModule } from './modules/reports/reports.module';
     ComplaintsModule,
     DashboardModule,
     ReportsModule,
+    AuditModule,
+    AdminModule,
   ],
   controllers: [HealthController],
   providers: [

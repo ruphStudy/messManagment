@@ -203,6 +203,7 @@ model User {
   reversedMeals          MealAttendance[]        @relation("ReversedBy")
   createdPauses          MealPause[]             @relation("PauseCreatedBy")
   cancelledPauses        MealPause[]             @relation("PauseCancelledBy")
+  auditActions           AuditLog[]              @relation("AuditActor")
 
   @@map("users")
 }
@@ -252,6 +253,7 @@ model Mess {
   feedback          Feedback[]
   complaints        Complaint[]
   files             StoredFile[]
+  auditLogs         AuditLog[]
 
   @@index([ownerId])
   @@map("messes")
@@ -759,4 +761,29 @@ model StoredFile {
 
   @@index([messId])
   @@map("stored_files")
+}
+
+/// Platform-admin (and other critical platform) actions. Append-only; never stores secrets.
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  actorUserId String   @db.Uuid
+  /// e.g. MESS_SUSPENDED, USER_REACTIVATED, ADMIN_LOGIN (see AuditAction in @mess/shared)
+  action      String   @db.VarChar(40)
+  /// MESS | USER
+  targetType  String   @db.VarChar(20)
+  targetId    String   @db.Uuid
+  messId      String?  @db.Uuid
+  reason      String?  @db.VarChar(500)
+  /// Small, non-sensitive context (e.g. target name at the time).
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  actor User  @relation("AuditActor", fields: [actorUserId], references: [id])
+  mess  Mess? @relation(fields: [messId], references: [id])
+
+  @@index([createdAt])
+  @@index([targetType, targetId, createdAt])
+  @@index([messId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@map("audit_logs")
 }

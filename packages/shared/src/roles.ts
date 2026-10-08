@@ -79,12 +79,14 @@ export const Permission = {
   REPORTS_VIEW: 'reports:view',
   /** Business parts of the dashboard: students, subscriptions, feedback, complaints, action items. */
   DASHBOARD_BUSINESS_VIEW: 'dashboard:business',
+  /** Platform admin portal (/admin): cross-mess monitoring, mess/user suspension, audit, system status. */
+  PLATFORM_ADMIN_ACCESS: 'platform:admin',
   STUDENT_SELF: 'student:self',
 } as const;
 export type Permission = (typeof Permission)[keyof typeof Permission];
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
-  PLATFORM_ADMIN: [],
+  PLATFORM_ADMIN: [Permission.PLATFORM_ADMIN_ACCESS],
   MESS_OWNER: [
     Permission.MESS_CREATE,
     Permission.MESS_VIEW,

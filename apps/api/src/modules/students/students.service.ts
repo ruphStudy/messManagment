@@ -24,7 +24,7 @@ import {
 } from './student.mapper';
 
 const detailInclude = { user: { select: { lastLoginAt: true } } } as const;
-const selfInclude = { mess: { select: { id: true, name: true, mobile: true, city: true } } } as const;
+const selfInclude = { mess: { select: { id: true, name: true, mobile: true, city: true, status: true } } } as const;
 const NOT_ARCHIVED = { not: StudentStatus.ARCHIVED };
 
 /**

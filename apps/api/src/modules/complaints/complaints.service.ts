@@ -1,6 +1,8 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { ComplaintStatus, MessageAuthor, NotificationType, Prisma, type User } from '@prisma/client';
 import {
+  type AdminComplaintDetail,
+  type AdminComplaintItem,
   canTransition,
   COMPLAINT_CATEGORY_LABELS,
   COMPLAINT_STATUS_LABELS,
@@ -230,6 +232,29 @@ export class ComplaintsService {
       body,
       data: { screen: NotificationScreen.COMPLAINT, complaintId },
     });
+  }
+
+  // ── Platform admin (read-only, cross-mess) ──
+
+  /** Same filters as the mess list, across all messes (or one), newest first. */
+  async listForPlatform(query: ListComplaintsQueryDto & { messId?: string }) {
+    // Build the normal mess filter, then swap the tenant condition for the admin's optional mess filter.
+    const { messId: _tenant, ...rest } = this.listWhere('', query);
+    const where: Prisma.ComplaintWhereInput = { ...rest, ...(query.messId ? { messId: query.messId } : {}) };
+    const include = { ...listInclude, mess: { select: { id: true, name: true } } } as const;
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.complaint.findMany({ where, include, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }], skip: query.skip, take: query.pageSize }),
+      this.prisma.complaint.count({ where }),
+    ]);
+    return new Paginated(rows.map((r): AdminComplaintItem => ({ ...toSummary(r), student: r.student, mess: r.mess })), total, query);
+  }
+
+  /** Conversation and status history only; the photo stays with the mess (attachment id is not exposed). */
+  async detailForPlatform(id: string): Promise<AdminComplaintDetail> {
+    const row = await this.prisma.complaint.findUnique({ where: { id }, include: { ...detailInclude, mess: { select: { id: true, name: true } } } });
+    if (!row) throw this.notFound();
+    const { attachmentId: _photo, ...detail } = toDetail(row);
+    return { ...detail, mess: row.mess };
   }
 
   private alreadyResolved() {

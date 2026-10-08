@@ -10,18 +10,20 @@ import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@/components/ui/modal';
 import { useAuth } from '@/lib/auth/auth-context';
 import { cn } from '@/lib/cn';
-import { navForRole } from '@/lib/navigation';
+import { ADMIN_NAV_ITEMS, navForRole } from '@/lib/navigation';
 import { NotificationBell } from '@/components/notifications/notification-bell';
+import { Alert } from '@/components/ui/alert';
 
-function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarNav({ admin, onNavigate }: { admin: boolean; onNavigate?: () => void }) {
   const { session } = useAuth();
   const pathname = usePathname();
   if (!session) return null;
 
   return (
     <nav aria-label="Main" className="flex flex-col gap-0.5 p-3">
-      {navForRole(session.role).map(({ label, href, icon: Icon, soon }) => {
-        const active = pathname === href || pathname.startsWith(`${href}/`);
+      {(admin ? ADMIN_NAV_ITEMS : navForRole(session.role)).map(({ label, href, icon: Icon, soon }) => {
+        // "/admin" (dashboard) is a prefix of every admin page, so it only matches exactly.
+        const active = pathname === href || (href !== '/admin' && pathname.startsWith(`${href}/`));
         const content = (
           <>
             <Icon className="size-5 shrink-0" aria-hidden />
@@ -50,7 +52,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-function UserMenu({ onLogout }: { onLogout: () => void }) {
+function UserMenu({ admin, onLogout }: { admin: boolean; onLogout: () => void }) {
   const { session } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -95,14 +97,16 @@ function UserMenu({ onLogout }: { onLogout: () => void }) {
             </p>
             <p className="truncate text-xs text-ink-muted">{user.email ?? user.mobile}</p>
           </div>
-          <Link
-            role="menuitem"
-            href="/settings"
-            onClick={() => setOpen(false)}
-            className="mt-1 flex min-h-11 items-center gap-2 rounded-control px-3 text-sm hover:bg-canvas"
-          >
-            <Settings className="size-4" aria-hidden /> Mess settings
-          </Link>
+          {!admin && (
+            <Link
+              role="menuitem"
+              href="/settings"
+              onClick={() => setOpen(false)}
+              className="mt-1 flex min-h-11 items-center gap-2 rounded-control px-3 text-sm hover:bg-canvas"
+            >
+              <Settings className="size-4" aria-hidden /> Mess settings
+            </Link>
+          )}
           <button
             role="menuitem"
             onClick={() => {
@@ -119,8 +123,11 @@ function UserMenu({ onLogout }: { onLogout: () => void }) {
   );
 }
 
-/** Authenticated owner/staff layout: sidebar on desktop, slide-in drawer on small screens. */
-export function AppShell({ children }: { children: ReactNode }) {
+/**
+ * Authenticated layout: sidebar on desktop, slide-in drawer on small screens.
+ * `admin` switches to the platform admin portal (its own navigation, no mess items).
+ */
+export function AppShell({ children, admin = false }: { children: ReactNode; admin?: boolean }) {
   const { session, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -143,7 +150,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Logo />
         </div>
         <div className="flex-1 overflow-y-auto">
-          <SidebarNav />
+          <SidebarNav admin={admin} />
         </div>
       </aside>
 
@@ -158,7 +165,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto">
-              <SidebarNav onNavigate={() => setDrawerOpen(false)} />
+              <SidebarNav admin={admin} onNavigate={() => setDrawerOpen(false)} />
             </div>
           </div>
         </div>
@@ -169,18 +176,26 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Menu className="size-6" />
         </button>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold">{session?.membership?.mess.name}</p>
+          <p className="truncate font-semibold">{admin ? 'Platform Admin' : session?.membership?.mess.name}</p>
         </div>
-        <NotificationBell />
-        <UserMenu onLogout={() => setConfirmLogout(true)} />
+        {!admin && <NotificationBell />}
+        <UserMenu admin={admin} onLogout={() => setConfirmLogout(true)} />
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8 print:max-w-none print:p-0">{children}</main>
+      <main className={cn('mx-auto px-4 py-6 sm:px-6 sm:py-8 print:max-w-none print:p-0', admin ? 'max-w-6xl' : 'max-w-5xl')}>
+        {!admin && session?.membership?.mess.status === 'SUSPENDED' && (
+          <Alert tone="danger" className="mb-6">
+            <strong>This mess is temporarily unavailable.</strong> The platform team has paused it. You can still view your records, but changes,
+            QR scanning and payments are blocked. Please contact support.
+          </Alert>
+        )}
+        {children}
+      </main>
 
       <ConfirmDialog
         open={confirmLogout}
         title="Sign out?"
-        description="You will need to sign in again to manage your mess."
+        description={admin ? 'You will need to sign in again to use the admin portal.' : 'You will need to sign in again to manage your mess.'}
         confirmLabel="Sign out"
         tone="danger"
         loading={loggingOut}

@@ -73,6 +73,8 @@ export const ErrorCode = {
   FILE_NOT_FOUND: 'FILE_NOT_FOUND',
   REPORT_RANGE_TOO_LARGE: 'REPORT_RANGE_TOO_LARGE',
   EXPORT_TOO_LARGE: 'EXPORT_TOO_LARGE',
+  MESS_SUSPENDED: 'MESS_SUSPENDED',
+  ADMIN_ACTION_NOT_ALLOWED: 'ADMIN_ACTION_NOT_ALLOWED',
   RATE_LIMITED: 'RATE_LIMITED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;
@@ -122,7 +124,8 @@ export interface MembershipSummary {
   id: string;
   role: MessRole;
   status: MembershipStatus;
-  mess: { id: string; name: string };
+  /** SUSPENDED: the platform paused this mess — records stay readable, changes are blocked. */
+  mess: { id: string; name: string; status: MessStatus };
 }
 
 /** Current user plus the mess they are working in (if any). */

@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
-import { AuthResponse, ErrorCode, isEmailIdentifier, normalizeMobile, Role, WEB_ROLES } from '@mess/shared';
+import { AuditAction, AuditTargetType, AuthResponse, ErrorCode, isEmailIdentifier, normalizeMobile, Role, WEB_ROLES } from '@mess/shared';
 import { APP_CONFIG, AppConfig } from '../../config/app-config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AppException } from '../../common/http/app.exception';
@@ -8,6 +8,7 @@ import { toAuthContext, toAuthUser } from '../users/user.mapper';
 import { AuthContextService } from './auth-context.service';
 import { DUMMY_PASSWORD_HASH, hashPassword, verifyPassword } from './crypto.util';
 import { StudentLinkService } from '../students/student-link.service';
+import { AuditService } from '../audit/audit.service';
 import { OtpService } from './otp.service';
 import { IssuedSession, SessionMeta, SessionService } from './session.service';
 import { LoginDto, RegisterOwnerDto } from './dto/auth.dto';
@@ -27,6 +28,7 @@ export class AuthService {
     private readonly authContext: AuthContextService,
     private readonly otp: OtpService,
     private readonly studentLinker: StudentLinkService,
+    private readonly audit: AuditService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
@@ -82,7 +84,11 @@ export class AuthService {
       throw AppException.forbidden('Your mess access has been removed. Contact your mess owner.', ErrorCode.ACCOUNT_DISABLED);
     }
 
-    return this.startSession(user, { ...meta, persistent: dto.rememberMe ?? false });
+    const result = await this.startSession(user, { ...meta, persistent: dto.rememberMe ?? false });
+    if (user.role === Role.PLATFORM_ADMIN) {
+      await this.audit.record({ actorUserId: user.id, action: AuditAction.ADMIN_LOGIN, targetType: AuditTargetType.USER, targetId: user.id, label: [user.firstName, user.lastName].filter(Boolean).join(' ') });
+    }
+    return result;
   }
 
   async requestStudentOtp(mobile: string) {

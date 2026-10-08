@@ -38,6 +38,16 @@ export class AuthContextService {
     }
   }
 
+  /** Whether the mess of the student's own record (same pick as StudentsService.resolveSelf) is suspended. */
+  async studentMessSuspended(userId: string): Promise<boolean> {
+    const student = await this.prisma.messStudent.findFirst({
+      where: { userId, status: { not: 'ARCHIVED' } },
+      orderBy: [{ status: 'asc' }, { joiningDate: 'desc' }],
+      select: { mess: { select: { status: true } } },
+    });
+    return student?.mess.status === 'SUSPENDED';
+  }
+
   /** MVP: a user works in one mess at a time — the earliest active membership. */
   findActiveMembership(userId: string): Promise<ActiveMembership | null> {
     return this.prisma.messMembership.findFirst({

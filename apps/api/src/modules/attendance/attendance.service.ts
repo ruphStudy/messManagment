@@ -166,7 +166,8 @@ export class AttendanceService {
   async mealQr(user: User): Promise<MealQrResponse> {
     const student = await this.students.resolveSelf(user);
     if (!student) return { state: 'NOT_LINKED' };
-    if (student.status !== StudentStatus.ACTIVE) return { state: 'INACTIVE', messName: student.mess.name };
+    // A suspended mess serves no meals, so no QR either.
+    if (student.status !== StudentStatus.ACTIVE || student.mess.status !== 'ACTIVE') return { state: 'INACTIVE', messName: student.mess.name };
 
     const today = businessToday();
     const studentName = [student.firstName, student.lastName].filter(Boolean).join(' ');

@@ -14,5 +14,6 @@ import { ReportsService } from './reports.service';
   imports: [StudentsModule, AttendanceModule, PausesModule, SubscriptionsModule, PaymentsModule, ExpensesModule, FeedbackModule, ComplaintsModule],
   controllers: [ReportsController],
   providers: [ReportsService],
+  exports: [ReportsService],
 })
 export class ReportsModule {}

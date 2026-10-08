@@ -1,5 +1,9 @@
 import {
+  Activity,
   BarChart3,
+  Building2,
+  ScrollText,
+  ServerCog,
   CalendarCheck,
   ClipboardList,
   CreditCard,
@@ -46,3 +50,13 @@ export const NAV_ITEMS: NavItem[] = [
 export function navForRole(role: Role) {
   return NAV_ITEMS.filter((item) => !item.permission || can(role, item.permission));
 }
+
+/** Platform admin portal (/admin). Every item needs PLATFORM_ADMIN_ACCESS, enforced by the admin layout and the API. */
+export const ADMIN_NAV_ITEMS: NavItem[] = [
+  { label: 'Dashboard', href: '/admin', icon: Activity, permission: Permission.PLATFORM_ADMIN_ACCESS },
+  { label: 'Messes', href: '/admin/messes', icon: Building2, permission: Permission.PLATFORM_ADMIN_ACCESS },
+  { label: 'Users', href: '/admin/users', icon: Users, permission: Permission.PLATFORM_ADMIN_ACCESS },
+  { label: 'Complaints', href: '/admin/complaints', icon: MessageSquareWarning, permission: Permission.PLATFORM_ADMIN_ACCESS },
+  { label: 'Activity / Audit', href: '/admin/audit', icon: ScrollText, permission: Permission.PLATFORM_ADMIN_ACCESS },
+  { label: 'System', href: '/admin/system', icon: ServerCog, permission: Permission.PLATFORM_ADMIN_ACCESS },
+];
