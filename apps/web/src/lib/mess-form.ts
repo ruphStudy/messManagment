@@ -5,7 +5,9 @@ import {
   LIMITS,
   MESSAGES,
   MessType,
+  servingTimeErrors,
   validators,
+  type MealServingTimes,
   type MessInput,
   type MessProfile,
 } from '@mess/shared';
@@ -48,8 +50,15 @@ export function messToForm(mess: MessProfile): MessFormValues {
   return { ...rest, email: mess.email ?? '', openingTime: mess.openingTime ?? '', closingTime: mess.closingTime ?? '' };
 }
 
+const TIME_KEYS = ['breakfastStart', 'breakfastEnd', 'lunchStart', 'lunchEnd', 'dinnerStart', 'dinnerEnd'] as const;
+
 export function validateMess(v: MessFormValues): FieldErrors<MessFormValues> {
+  const timeFormat = Object.fromEntries(TIME_KEYS.filter((k) => v[k] !== undefined).map((k) => [k, validators.required(v[k] ?? '') ?? validators.optionalTime(v[k] ?? '')]));
+  const allTimesValid = TIME_KEYS.every((k) => v[k] && !timeFormat[k]);
+  const order = allTimesValid ? Object.fromEntries(Object.entries(servingTimeErrors(v as MealServingTimes)).map(([k, msgs]) => [k, msgs[0]])) : {};
   return {
+    ...timeFormat,
+    ...order,
     name: firstError(v.name, validators.required, validators.maxLength(LIMITS.messNameMax)),
     mobile: firstError(v.mobile, validators.required, validators.mobile),
     email: validators.optionalEmail(v.email),

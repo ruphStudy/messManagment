@@ -153,7 +153,18 @@ export class MenusService {
     const [mess, rows] = await Promise.all([
       this.prisma.mess.findUniqueOrThrow({
         where: { id: student.messId },
-        select: { name: true, breakfastAvailable: true, lunchAvailable: true, dinnerAvailable: true },
+        select: {
+          name: true,
+          breakfastAvailable: true,
+          lunchAvailable: true,
+          dinnerAvailable: true,
+          breakfastStart: true,
+          breakfastEnd: true,
+          lunchStart: true,
+          lunchEnd: true,
+          dinnerStart: true,
+          dinnerEnd: true,
+        },
       }),
       this.prisma.dailyMenu.findMany({
         where: { messId: student.messId, isPublished: true, menuDate: { gte: fromDateString(from), lte: fromDateString(to) } },
@@ -164,6 +175,14 @@ export class MenusService {
       linked: true,
       messName: mess.name,
       servedMeals: { breakfast: mess.breakfastAvailable, lunch: mess.lunchAvailable, dinner: mess.dinnerAvailable },
+      servingTimes: {
+        breakfastStart: mess.breakfastStart,
+        breakfastEnd: mess.breakfastEnd,
+        lunchStart: mess.lunchStart,
+        lunchEnd: mess.lunchEnd,
+        dinnerStart: mess.dinnerStart,
+        dinnerEnd: mess.dinnerEnd,
+      },
       days: this.fillDays(from, to, rows, toPublishedMenu),
     };
   }

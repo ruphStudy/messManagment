@@ -14,3 +14,5 @@ export * from './notifications';
 export * from './feedback';
 export * from './reports';
 export * from './admin';
+export * from './meal-times';
+export * from './staff';

@@ -43,7 +43,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Feedback', href: '/feedback', icon: MessageSquare, permission: Permission.FEEDBACK_VIEW },
   { label: 'Complaints', href: '/complaints', icon: MessageSquareWarning, permission: Permission.COMPLAINT_VIEW },
   { label: 'Reports', href: '/reports', icon: BarChart3, permission: Permission.REPORTS_VIEW },
-  { label: 'Staff', href: '/staff', icon: UserCog, permission: Permission.STAFF_MANAGE, soon: true },
+  { label: 'Staff', href: '/staff', icon: UserCog, permission: Permission.STAFF_VIEW },
   { label: 'Settings', href: '/settings', icon: Settings, permission: Permission.MESS_VIEW },
 ];
 

@@ -1,24 +1,22 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { MEAL_KEYS, MEAL_LABELS, type MealKey, type StudentMenuResponse } from '@mess/shared';
+import { formatTime12, istClockTime, MEAL_KEYS, MEAL_LABELS, mealAtTime, remainingMeals, servingWindow, type StudentMenuResponse } from '@mess/shared';
 import { colors, spacing, TOUCH_TARGET } from '@/theme/tokens';
 import { visibleMeals } from './day-menu';
 import { Card } from './layout';
 import { AppText } from './text';
 
-/** Breakfast until 10, lunch until 3 pm, then dinner (device clock; students are in the mess's timezone). */
-function upcomingMeals(): MealKey[] {
-  const hour = new Date().getHours();
-  const start = hour < 10 ? 0 : hour < 15 ? 1 : 2;
-  return MEAL_KEYS.slice(start);
-}
-
 /** Short "Today's menu" card for Home: the next meals only, with a link to the full menu. */
 export function TodayMenuPreview({ data }: { data: StudentMenuResponse | null }) {
   if (!data?.linked) return null;
   const day = data.days[0];
-  const meals = day?.menu ? visibleMeals(day.menu, data.servedMeals).filter((k) => upcomingMeals().includes(k)).slice(0, 2) : [];
+  // Current meal (if serving now) and the next one, from the mess's configured serving times (Indian time).
+  const now = istClockTime();
+  const served = MEAL_KEYS.filter((k) => data.servedMeals[k]);
+  const upcoming = remainingMeals(data.servingTimes, served, now);
+  const current = mealAtTime(data.servingTimes, served, now);
+  const meals = day?.menu ? upcoming.filter((k) => visibleMeals(day.menu!, data.servedMeals).includes(k)).slice(0, 2) : [];
 
   return (
     <Card>
@@ -37,7 +35,10 @@ export function TodayMenuPreview({ data }: { data: StudentMenuResponse | null })
           const meal = day.menu![key];
           return (
             <AppText key={key} numberOfLines={2}>
-              <AppText style={{ fontWeight: '600' }}>{MEAL_LABELS[key]}: </AppText>
+              <AppText style={{ fontWeight: '600' }}>
+                {MEAL_LABELS[key]}
+                {current?.meal === key && current.state === 'CURRENT' ? ' (serving now)' : ` (${formatTime12(servingWindow(data.servingTimes, key).start)})`}:{' '}
+              </AppText>
               {!meal.available ? `${MEAL_LABELS[key]} unavailable` : meal.items.join(', ') || 'Items not listed'}
             </AppText>
           );

@@ -170,19 +170,21 @@ enum ClientType {
 
 /// A person who can sign in. `role` is the account type; mess-specific roles live on MessMembership.
 model User {
-  id             String     @id @default(uuid()) @db.Uuid
-  firstName      String     @db.VarChar(50)
-  lastName       String?    @db.VarChar(50)
-  mobile         String     @unique @db.VarChar(15)
-  email          String?    @unique @db.VarChar(120)
-  passwordHash   String?
-  role           Role
-  status         UserStatus @default(ACTIVE)
-  emailVerified  Boolean    @default(false)
-  mobileVerified Boolean    @default(false)
-  lastLoginAt    DateTime?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  id                 String     @id @default(uuid()) @db.Uuid
+  firstName          String     @db.VarChar(50)
+  lastName           String?    @db.VarChar(50)
+  mobile             String     @unique @db.VarChar(15)
+  email              String?    @unique @db.VarChar(120)
+  passwordHash       String?
+  role               Role
+  status             UserStatus @default(ACTIVE)
+  emailVerified      Boolean    @default(false)
+  mobileVerified     Boolean    @default(false)
+  lastLoginAt        DateTime?
+  /// Set when an owner/manager assigns a temporary password; cleared when the user changes it.
+  mustChangePassword Boolean    @default(false)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 
   ownedMesses            Mess[]                  @relation("MessOwner")
   memberships            MessMembership[]
@@ -228,6 +230,13 @@ model Mess {
   openingTime          String?    @db.VarChar(5)
   closingTime          String?    @db.VarChar(5)
   logoUrl              String?
+  /// HH:mm (Asia/Kolkata) serving windows; start < end (DB check). Drive scanner default meal and student Home.
+  breakfastStart       String     @default("07:30") @db.VarChar(5)
+  breakfastEnd         String     @default("09:30") @db.VarChar(5)
+  lunchStart           String     @default("12:00") @db.VarChar(5)
+  lunchEnd             String     @default("14:30") @db.VarChar(5)
+  dinnerStart          String     @default("19:30") @db.VarChar(5)
+  dinnerEnd            String     @default("21:30") @db.VarChar(5)
   /// HH:mm (Asia/Kolkata): same-day pauses must be made before these times
   breakfastPauseCutoff String     @default("06:00") @db.VarChar(5)
   lunchPauseCutoff     String     @default("09:00") @db.VarChar(5)

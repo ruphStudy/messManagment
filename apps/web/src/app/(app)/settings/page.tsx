@@ -1,25 +1,28 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { ChevronRight, Users } from 'lucide-react';
 import { can, MessStatus, Permission, type MessProfile } from '@mess/shared';
-import { MessBasicFields, MessLocationFields, MessMealFields, MessPauseCutoffFields } from '@/components/mess/mess-fields';
-import { Alert } from '@/components/ui/alert';
+import { AccountSettings } from '@/components/settings/account-settings';
+import { MealSettingsForm, MessProfileForm } from '@/components/settings/mess-settings-forms';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/loader';
 import { PageHeader } from '@/components/ui/page-header';
 import { ErrorState } from '@/components/ui/states';
-import { useToast } from '@/components/ui/toast';
 import { api, errorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth/auth-context';
-import { messToForm, toMessInput, validateMess, type MessFormValues } from '@/lib/mess-form';
-import { useForm } from '@/lib/use-form';
+import { cn } from '@/lib/cn';
+import { useListParams } from '@/lib/use-list-params';
+
+type Tab = 'profile' | 'meals' | 'staff' | 'account';
+const TAB_LABELS: Record<Tab, string> = { profile: 'Mess profile', meals: 'Meals & timings', staff: 'Staff & access', account: 'Account & security' };
 
 function SettingsSkeleton() {
   return (
     <div className="flex flex-col gap-4" aria-busy>
-      {[0, 1, 2].map((i) => (
+      {[0, 1].map((i) => (
         <Card key={i}>
           <Skeleton className="mb-5 h-5 w-40" />
           <Skeleton className="mb-3 h-11 w-full" />
@@ -30,92 +33,79 @@ function SettingsSkeleton() {
   );
 }
 
-function MessSettingsForm({ mess, onSaved }: { mess: MessProfile; onSaved: (mess: MessProfile) => void }) {
-  const { session, reload } = useAuth();
-  const toast = useToast();
-  const canEdit = can(session?.role, Permission.MESS_UPDATE);
-  const initial = messToForm(mess);
+function MessTab({ tab }: { tab: 'profile' | 'meals' }) {
+  const [mess, setMess] = useState<MessProfile | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const load = useCallback(() => {
+    setError(null);
+    api<MessProfile>('/mess').then(setMess).catch((e: unknown) => setError(errorMessage(e)));
+  }, []);
+  useEffect(load, [load]);
 
-  const form = useForm<MessFormValues>({ initial, validate: validateMess });
-  const dirty = JSON.stringify(form.values) !== JSON.stringify(initial);
+  if (error) return <ErrorState title="Couldn't load your mess" description={error} onRetry={load} />;
+  if (!mess) return <SettingsSkeleton />;
+  return (
+    <>
+      <div className="mb-4 flex items-center gap-2">
+        <span className="text-sm text-ink-muted">Mess status</span>
+        <Badge tone={mess.status === MessStatus.ACTIVE ? 'success' : 'danger'}>{mess.status === MessStatus.ACTIVE ? 'Active' : 'Suspended'}</Badge>
+      </div>
+      {tab === 'profile' ? <MessProfileForm key={mess.updatedAt} mess={mess} onSaved={setMess} /> : <MealSettingsForm key={mess.updatedAt} mess={mess} onSaved={setMess} />}
+    </>
+  );
+}
 
-  const onSubmit = form.handleSubmit(async (values) => {
-    const updated = await api<MessProfile>('/mess', { method: 'PATCH', body: toMessInput(values) });
-    onSaved(updated);
-    if (updated.name !== mess.name) await reload();
-    toast.success('Changes saved');
-  });
-
-  const fieldProps = { ...form, disabled: !canEdit || form.submitting };
+function SettingsScreen() {
+  const { session } = useAuth();
+  const list = useListParams();
+  // Staff only manage their own account; owners/managers also see mess and team settings.
+  const tabs: Tab[] = [
+    ...(can(session?.role, Permission.MESS_SETTINGS_UPDATE) ? (['profile', 'meals'] as const) : []),
+    ...(can(session?.role, Permission.STAFF_VIEW) ? (['staff'] as const) : []),
+    'account',
+  ];
+  const requested = list.get('tab') as Tab;
+  const tab = session?.user.mustChangePassword ? 'account' : tabs.includes(requested) ? requested : tabs[0];
 
   return (
-    <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4 pb-24">
-      {!canEdit && <Alert tone="info">You can view these details. Only the owner or manager can change them.</Alert>}
-
-      <Card>
-        <CardHeader title="Basic details" description="Name and contact shown to students" />
-        <MessBasicFields {...fieldProps} />
-      </Card>
-      <Card>
-        <CardHeader title="Address" />
-        <MessLocationFields {...fieldProps} />
-      </Card>
-      <Card>
-        <CardHeader title="Meals & timings" />
-        <MessMealFields {...fieldProps} />
-      </Card>
-      <Card>
-        <CardHeader title="Meal pause cut-off" description="Students can pause today's meal only before these times. Future days can always be paused." />
-        <MessPauseCutoffFields {...fieldProps} />
-      </Card>
-      <Card>
-        <CardHeader title="Logo" description="Logo upload will be available in a later update." />
-      </Card>
-
-      {canEdit && (
-        <div className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-surface/95 px-4 py-3 backdrop-blur lg:left-64">
-          <div className="mx-auto flex max-w-5xl items-center justify-end gap-2 sm:px-2">
-            {form.formError && <p className="mr-auto text-sm text-danger">{form.formError}</p>}
-            <Button variant="secondary" disabled={!dirty || form.submitting} onClick={() => form.setValues(initial)}>
-              Discard
-            </Button>
-            <Button type="submit" disabled={!dirty} loading={form.submitting}>
-              Save changes
-            </Button>
-          </div>
-        </div>
+    <>
+      <PageHeader title="Settings" description={tabs.length > 1 ? 'Your mess, team and account' : 'Your account'} />
+      {tabs.length > 1 && (
+        <nav aria-label="Settings sections" className="-mx-4 mb-4 flex gap-1 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+          {tabs.map((t) => (
+            <Link
+              key={t}
+              href={`/settings?tab=${t}`}
+              aria-current={tab === t ? 'page' : undefined}
+              className={cn('inline-flex min-h-10 shrink-0 items-center rounded-full px-4 text-sm font-semibold', tab === t ? 'bg-ink text-white' : 'border border-border bg-surface text-ink-muted hover:bg-canvas')}
+            >
+              {TAB_LABELS[t]}
+            </Link>
+          ))}
+        </nav>
       )}
-    </form>
+      {tab === 'profile' || tab === 'meals' ? (
+        <MessTab key={tab} tab={tab} />
+      ) : tab === 'staff' ? (
+        <Link href="/staff" className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 hover:border-brand-300">
+          <Users className="size-6 text-brand-600" aria-hidden />
+          <span className="flex-1">
+            <span className="block font-semibold">Manage team</span>
+            <span className="block text-sm text-ink-muted">Add managers and staff, change roles, deactivate access or reset passwords.</span>
+          </span>
+          <ChevronRight className="size-5 text-ink-muted" aria-hidden />
+        </Link>
+      ) : (
+        <AccountSettings />
+      )}
+    </>
   );
 }
 
 export default function SettingsPage() {
-  const [mess, setMess] = useState<MessProfile | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(() => {
-    setError(null);
-    api<MessProfile>('/mess')
-      .then(setMess)
-      .catch((e: unknown) => setError(errorMessage(e)));
-  }, []);
-
-  useEffect(load, [load]);
-
   return (
-    <>
-      <PageHeader
-        title="Mess settings"
-        description="Your mess profile, address and timings"
-        actions={mess && <Badge tone={mess.status === MessStatus.ACTIVE ? 'success' : 'danger'}>{mess.status === MessStatus.ACTIVE ? 'Active' : 'Suspended'}</Badge>}
-      />
-      {error ? (
-        <ErrorState title="Couldn't load your mess" description={error} onRetry={load} />
-      ) : mess ? (
-        <MessSettingsForm key={mess.updatedAt} mess={mess} onSaved={setMess} />
-      ) : (
-        <SettingsSkeleton />
-      )}
-    </>
+    <Suspense>
+      <SettingsScreen />
+    </Suspense>
   );
 }

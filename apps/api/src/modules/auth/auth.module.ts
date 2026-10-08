@@ -29,6 +29,6 @@ import { ConsoleSmsProvider, SMS_PROVIDER } from './sms/sms.provider';
     OtpService,
     { provide: SMS_PROVIDER, useClass: ConsoleSmsProvider },
   ],
-  exports: [AuthContextService],
+  exports: [AuthContextService, SessionService],
 })
 export class AuthModule {}

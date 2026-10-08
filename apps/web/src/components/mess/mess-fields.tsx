@@ -4,7 +4,9 @@ import {
   DEFAULT_COUNTRY_CODE,
   FOOD_TYPE_LABELS,
   FoodType,
+  formatTime12,
   INDIAN_STATES,
+  MEAL_LABELS,
   MESS_TYPE_LABELS,
   MessType,
 } from '@mess/shared';
@@ -126,7 +128,17 @@ export function MessLocationFields({ values, errors, setField, disabled }: MessF
   );
 }
 
-export function MessMealFields({ values, errors, setField, disabled }: MessFieldsProps) {
+export function FoodTypeField({ values, setField, disabled }: MessFieldsProps) {
+  return (
+    <fieldset disabled={disabled}>
+      <RadioGroup name="foodType" label="Food served" value={values.foodType} options={foodTypeOptions} onChange={(v) => setField('foodType', v)} />
+    </fieldset>
+  );
+}
+
+/** Meals served, food type (unless shown elsewhere) and opening hours. */
+export function MessMealFields({ hideFoodType = false, ...props }: MessFieldsProps & { hideFoodType?: boolean }) {
+  const { values, errors, setField, disabled } = props;
   return (
     <div className="flex flex-col gap-5">
       <fieldset disabled={disabled}>
@@ -158,15 +170,7 @@ export function MessMealFields({ values, errors, setField, disabled }: MessField
         )}
       </fieldset>
 
-      <fieldset disabled={disabled}>
-        <RadioGroup
-          name="foodType"
-          label="Food served"
-          value={values.foodType}
-          options={foodTypeOptions}
-          onChange={(v) => setField('foodType', v)}
-        />
-      </fieldset>
+      {!hideFoodType && <FoodTypeField {...props} />}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
@@ -192,28 +196,40 @@ export function MessMealFields({ values, errors, setField, disabled }: MessField
   );
 }
 
-const CUTOFF_FIELDS = [
-  { key: 'breakfastPauseCutoff', label: 'Breakfast', served: 'breakfastAvailable' },
-  { key: 'lunchPauseCutoff', label: 'Lunch', served: 'lunchAvailable' },
-  { key: 'dinnerPauseCutoff', label: 'Dinner', served: 'dinnerAvailable' },
+const TIMING_ROWS = [
+  { meal: 'breakfast', served: 'breakfastAvailable', start: 'breakfastStart', end: 'breakfastEnd', cutoff: 'breakfastPauseCutoff' },
+  { meal: 'lunch', served: 'lunchAvailable', start: 'lunchStart', end: 'lunchEnd', cutoff: 'lunchPauseCutoff' },
+  { meal: 'dinner', served: 'dinnerAvailable', start: 'dinnerStart', end: 'dinnerEnd', cutoff: 'dinnerPauseCutoff' },
 ] as const;
 
-/** Latest time students can pause a meal for the same day (Indian time). */
-export function MessPauseCutoffFields({ values, errors, setField, disabled }: MessFieldsProps) {
+/**
+ * Per served meal: serving window (drives the scanner's default meal and the student app's "next meal")
+ * and the same-day pause cut-off. Indian time.
+ */
+export function MealTimingFields({ values, errors, setField, disabled }: MessFieldsProps) {
+  const rows = TIMING_ROWS.filter((r) => values[r.served]);
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
-      {CUTOFF_FIELDS.filter((f) => values[f.served]).map((f) => (
-        <Input
-          key={f.key}
-          id={f.key}
-          type="time"
-          label={`${f.label} — pause before`}
-          disabled={disabled}
-          value={values[f.key] ?? ''}
-          error={errors[f.key]}
-          onChange={(e) => setField(f.key, e.target.value)}
-        />
-      ))}
+    <div className="flex flex-col divide-y divide-border">
+      {rows.map((r) => {
+        const start = values[r.start] ?? '';
+        const end = values[r.end] ?? '';
+        const cutoff = values[r.cutoff] ?? '';
+        return (
+          <fieldset key={r.meal} disabled={disabled} className="py-4 first:pt-0 last:pb-0">
+            <legend className="mb-2 font-semibold">{MEAL_LABELS[r.meal]}</legend>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Input id={r.start} type="time" label="Serving starts" value={start} error={errors[r.start]} onChange={(e) => setField(r.start, e.target.value)} />
+              <Input id={r.end} type="time" label="Serving ends" value={end} error={errors[r.end]} onChange={(e) => setField(r.end, e.target.value)} />
+              <Input id={r.cutoff} type="time" label="Pause before (same day)" value={cutoff} error={errors[r.cutoff]} onChange={(e) => setField(r.cutoff, e.target.value)} />
+            </div>
+            {start && end && cutoff && (
+              <p className="mt-2 text-sm text-ink-muted">
+                Serving {formatTime12(start)} – {formatTime12(end)} · students can pause today&apos;s {MEAL_LABELS[r.meal].toLowerCase()} until {formatTime12(cutoff)}
+              </p>
+            )}
+          </fieldset>
+        );
+      })}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Camera, CameraOff, Keyboard, Loader2 } from 'lucide-react';
 import type QrScannerType from 'qr-scanner';
-import { Permission, type MealType, type ServeResult } from '@mess/shared';
+import { Permission, type MealServingTimes, type MealType, type ServeResult } from '@mess/shared';
 import { MealPicker } from '@/components/attendance/meal-picker';
 import { ServeResultBanner, type BannerState } from '@/components/attendance/serve-result-banner';
 import { Alert } from '@/components/ui/alert';
@@ -22,8 +22,8 @@ const SHOW_FAILURE_MS = 3500;
 /** Ignore the same QR read again within this window (the camera sees it many times per second). */
 const SAME_CODE_COOLDOWN_MS = 4000;
 
-function Scanner({ meals }: { meals: MealType[] }) {
-  const [meal, setMeal] = useState<MealType>(() => defaultMeal(meals));
+function Scanner({ meals, times }: { meals: MealType[]; times: MealServingTimes }) {
+  const [meal, setMeal] = useState<MealType>(() => defaultMeal(meals, times));
   const [camera, setCamera] = useState<CameraState>('idle');
   const [banner, setBanner] = useState<BannerState | null>(null);
   const [verifying, setVerifying] = useState(false);
@@ -162,14 +162,14 @@ function rejectionFromError(error: ApiError, mealType: MealType): ServeResult {
 }
 
 export default function ScanPage() {
-  const meals = useServedMeals();
+  const served = useServedMeals();
   return (
     <RequireAuth permission={Permission.ATTENDANCE_MARK}>
       <Link href="/attendance" className="mb-3 inline-flex min-h-11 items-center gap-1 text-sm font-medium text-ink-muted hover:text-ink">
         <ArrowLeft className="size-4" aria-hidden /> Attendance
       </Link>
       <h1 className="mb-4 text-display font-bold tracking-tight">Scan meal QR</h1>
-      {!meals ? <PageLoader /> : <Scanner meals={meals} />}
+      {!served ? <PageLoader /> : <Scanner meals={served.meals} times={served.times} />}
       <Alert tone="info" className="mx-auto mt-6 max-w-xl">Tip: keep this page open while serving — it scans the next student automatically.</Alert>
     </RequireAuth>
   );

@@ -1,5 +1,6 @@
 import type { FoodType, MembershipStatus, MessStatus, MessType, UserStatus } from './enums';
 import type { MessRole, Role } from './roles';
+import type { MealServingTimes } from './meal-times';
 
 export const API_PREFIX = '/api/v1';
 
@@ -75,6 +76,13 @@ export const ErrorCode = {
   EXPORT_TOO_LARGE: 'EXPORT_TOO_LARGE',
   MESS_SUSPENDED: 'MESS_SUSPENDED',
   ADMIN_ACTION_NOT_ALLOWED: 'ADMIN_ACTION_NOT_ALLOWED',
+  STAFF_NOT_FOUND: 'STAFF_NOT_FOUND',
+  STAFF_ALREADY_EXISTS: 'STAFF_ALREADY_EXISTS',
+  STAFF_ROLE_INVALID: 'STAFF_ROLE_INVALID',
+  STAFF_CANNOT_MODIFY_OWNER: 'STAFF_CANNOT_MODIFY_OWNER',
+  STAFF_CANNOT_MODIFY_SELF: 'STAFF_CANNOT_MODIFY_SELF',
+  STAFF_ACCOUNT_DISABLED: 'STAFF_ACCOUNT_DISABLED',
+  PASSWORD_INCORRECT: 'PASSWORD_INCORRECT',
   RATE_LIMITED: 'RATE_LIMITED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;
@@ -118,6 +126,8 @@ export interface AuthUser {
   status: UserStatus;
   emailVerified: boolean;
   mobileVerified: boolean;
+  /** A temporary password was set by the mess; the web app asks for a new one first. */
+  mustChangePassword: boolean;
 }
 
 export interface MembershipSummary {
@@ -182,7 +192,7 @@ export interface MessPauseCutoffs {
   dinnerPauseCutoff: string;
 }
 
-export interface MessProfile extends MessPauseCutoffs {
+export interface MessProfile extends MessPauseCutoffs, MealServingTimes {
   id: string;
   name: string;
   mobile: string;
@@ -204,5 +214,48 @@ export interface MessProfile extends MessPauseCutoffs {
   updatedAt: string;
 }
 
-export type MessInput = Omit<MessProfile, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'logoUrl' | keyof MessPauseCutoffs> &
-  Partial<MessPauseCutoffs>;
+export type MessInput = Omit<MessProfile, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'logoUrl' | keyof MessPauseCutoffs | keyof MealServingTimes> &
+  Partial<MessPauseCutoffs> &
+  Partial<MealServingTimes>;
+
+/** Operational settings owners and managers can change (PATCH /mess/settings). Profile fields stay owner-only. */
+export const MESS_SETTINGS_FIELDS = [
+  'breakfastAvailable',
+  'lunchAvailable',
+  'dinnerAvailable',
+  'openingTime',
+  'closingTime',
+  'breakfastStart',
+  'breakfastEnd',
+  'lunchStart',
+  'lunchEnd',
+  'dinnerStart',
+  'dinnerEnd',
+  'breakfastPauseCutoff',
+  'lunchPauseCutoff',
+  'dinnerPauseCutoff',
+] as const satisfies readonly (keyof MessProfile)[];
+export type MessSettingsInput = Partial<Pick<MessProfile, (typeof MESS_SETTINGS_FIELDS)[number]>>;
+
+// ── Own account ──
+
+export interface UpdateAccountRequest {
+  firstName?: string;
+  lastName?: string | null;
+  email?: string | null;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+/** Forgot password (team accounts): OTP to the registered mobile, then a new password. */
+export interface PasswordResetRequest {
+  mobile: string;
+}
+export interface PasswordResetConfirm {
+  mobile: string;
+  code: string;
+  newPassword: string;
+}

@@ -1,6 +1,6 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
-import { AuditAction, AuditTargetType, AuthResponse, ErrorCode, isEmailIdentifier, normalizeMobile, Role, WEB_ROLES } from '@mess/shared';
+import { AuditAction, AuditTargetType, AuthContext, AuthResponse, ErrorCode, isEmailIdentifier, normalizeMobile, Role, WEB_ROLES } from '@mess/shared';
 import { APP_CONFIG, AppConfig } from '../../config/app-config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AppException } from '../../common/http/app.exception';
@@ -11,7 +11,8 @@ import { StudentLinkService } from '../students/student-link.service';
 import { AuditService } from '../audit/audit.service';
 import { OtpService } from './otp.service';
 import { IssuedSession, SessionMeta, SessionService } from './session.service';
-import { LoginDto, RegisterOwnerDto } from './dto/auth.dto';
+import { ChangePasswordDto, LoginDto, PasswordResetConfirmDto, RegisterOwnerDto, UpdateAccountDto } from './dto/auth.dto';
+import type { RequestAuth } from '../../common/auth.types';
 
 const PASSWORD_LOGIN_ROLES: readonly Role[] = [...WEB_ROLES, Role.PLATFORM_ADMIN];
 
@@ -121,6 +122,61 @@ export class AuthService {
 
   async logout(refreshToken: string | undefined) {
     if (refreshToken) await this.sessions.revokeByToken(refreshToken);
+  }
+
+  // ── Own account (team accounts and platform admin) ──
+
+  async updateAccount(auth: RequestAuth, dto: UpdateAccountDto): Promise<AuthContext> {
+    this.assertPasswordAccount(auth.user);
+    if (dto.email && dto.email !== auth.user.email) {
+      const taken = await this.prisma.user.count({ where: { email: dto.email, id: { not: auth.user.id } } });
+      if (taken) throw AppException.conflict('This email is already used by another account', { email: ['Already in use'] });
+    }
+    const user = await this.prisma.user.update({
+      where: { id: auth.user.id },
+      data: { firstName: dto.firstName, lastName: dto.lastName, email: dto.email, ...(dto.email !== undefined && dto.email !== auth.user.email ? { emailVerified: false } : {}) },
+    });
+    return toAuthContext({ ...auth, user });
+  }
+
+  /** Verifies the current password, stores the new one and signs out every other session. */
+  async changePassword(auth: RequestAuth, dto: ChangePasswordDto): Promise<AuthContext> {
+    this.assertPasswordAccount(auth.user);
+    if (!auth.user.passwordHash || !(await verifyPassword(dto.currentPassword, auth.user.passwordHash))) {
+      throw new AppException(HttpStatus.BAD_REQUEST, ErrorCode.PASSWORD_INCORRECT, 'Your current password is incorrect', { currentPassword: ['Incorrect password'] });
+    }
+    if (dto.currentPassword === dto.newPassword) {
+      throw AppException.validation({ newPassword: ['Choose a password different from the current one'] });
+    }
+    const user = await this.prisma.user.update({
+      where: { id: auth.user.id },
+      data: { passwordHash: await hashPassword(dto.newPassword), mustChangePassword: false },
+    });
+    await this.sessions.revokeAllForUser(user.id, auth.sessionId);
+    return toAuthContext({ ...auth, user });
+  }
+
+  /** Forgot password: OTP to a team account's mobile. Same answer whether or not the number is registered. */
+  async requestPasswordReset(mobile: string) {
+    const user = await this.prisma.user.findUnique({ where: { mobile } });
+    if (!user || !PASSWORD_LOGIN_ROLES.includes(user.role) || user.status !== 'ACTIVE') {
+      return { expiresIn: this.config.otpTtlSeconds, resendIn: this.config.otpResendSeconds };
+    }
+    return this.otp.issue(mobile);
+  }
+
+  async confirmPasswordReset(dto: PasswordResetConfirmDto) {
+    const user = await this.prisma.user.findUnique({ where: { mobile: dto.mobile } });
+    if (!user || !PASSWORD_LOGIN_ROLES.includes(user.role)) {
+      throw new AppException(HttpStatus.BAD_REQUEST, ErrorCode.OTP_EXPIRED, 'This code has expired. Request a new one.');
+    }
+    await this.otp.verify(dto.mobile, dto.code);
+    await this.prisma.user.update({ where: { id: user.id }, data: { passwordHash: await hashPassword(dto.newPassword), mustChangePassword: false, mobileVerified: true } });
+    await this.sessions.revokeAllForUser(user.id);
+  }
+
+  private assertPasswordAccount(user: User) {
+    if (!PASSWORD_LOGIN_ROLES.includes(user.role)) throw AppException.forbidden('Use the student app to manage your profile', ErrorCode.WRONG_APP);
   }
 
   private async startSession(user: User, meta: SessionMeta): Promise<AuthResult> {

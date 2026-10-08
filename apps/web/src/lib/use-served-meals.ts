@@ -1,28 +1,43 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { MEAL_KEYS, type MealType, type MessProfile } from '@mess/shared';
+import {
+  businessNowTime,
+  DEFAULT_SERVING_TIMES,
+  MEAL_KEYS,
+  mealAtTime,
+  servingWindow,
+  type MealServingTimes,
+  type MealType,
+  type MessProfile,
+} from '@mess/shared';
 import { api } from './api';
 
-/** Meals this mess serves (from mess settings). Falls back to all meals if settings can't be loaded. */
-export function useServedMeals(): MealType[] | null {
-  const [meals, setMeals] = useState<MealType[] | null>(null);
+export interface ServedMeals {
+  meals: MealType[];
+  times: MealServingTimes;
+}
+
+/** Meals this mess serves and their serving windows (from mess settings). Falls back to all meals / default times. */
+export function useServedMeals(): ServedMeals | null {
+  const [served, setServed] = useState<ServedMeals | null>(null);
   useEffect(() => {
     api<MessProfile>('/mess')
       .then((m) => {
-        const served = MEAL_KEYS.filter((k) => m[`${k}Available`]);
-        setMeals(served.length ? served : [...MEAL_KEYS]);
+        const meals = MEAL_KEYS.filter((k) => m[`${k}Available`]);
+        setServed({ meals: meals.length ? meals : [...MEAL_KEYS], times: m });
       })
-      .catch(() => setMeals([...MEAL_KEYS]));
+      .catch(() => setServed({ meals: [...MEAL_KEYS], times: DEFAULT_SERVING_TIMES }));
   }, []);
-  return meals;
+  return served;
 }
 
-/** Breakfast before 11, lunch before 4 pm, dinner after — limited to meals the mess serves. */
-export function defaultMeal(served: MealType[]): MealType {
-  const hour = new Date().getHours();
-  const preferred: MealType = hour < 11 ? 'breakfast' : hour < 16 ? 'lunch' : 'dinner';
-  if (served.includes(preferred)) return preferred;
-  const order = MEAL_KEYS.indexOf(preferred);
-  return served.find((m) => MEAL_KEYS.indexOf(m) > order) ?? served[served.length - 1];
+/**
+ * Default meal for scanning: the meal being served now, else the next one today (configured serving times,
+ * Indian time); after the last meal, the last one (late entries). Staff can always switch manually.
+ */
+export function defaultMeal(meals: MealType[], times: MealServingTimes): MealType {
+  const at = mealAtTime(times, meals, businessNowTime());
+  if (at) return at.meal;
+  return [...meals].sort((a, b) => servingWindow(times, a).start.localeCompare(servingWindow(times, b).start)).at(-1) ?? meals[0];
 }

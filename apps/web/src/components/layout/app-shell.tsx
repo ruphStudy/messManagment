@@ -104,7 +104,7 @@ function UserMenu({ admin, onLogout }: { admin: boolean; onLogout: () => void })
               onClick={() => setOpen(false)}
               className="mt-1 flex min-h-11 items-center gap-2 rounded-control px-3 text-sm hover:bg-canvas"
             >
-              <Settings className="size-4" aria-hidden /> Mess settings
+              <Settings className="size-4" aria-hidden /> Settings
             </Link>
           )}
           <button
@@ -136,6 +136,12 @@ export function AppShell({ children, admin = false }: { children: ReactNode; adm
   const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => setDrawerOpen(false), [pathname]);
+
+  // A temporary password (set by the owner/manager) must be replaced before using the app.
+  const mustChange = !admin && !!session?.user.mustChangePassword;
+  useEffect(() => {
+    if (mustChange && pathname !== '/settings') router.replace('/settings?tab=account');
+  }, [mustChange, pathname, router]);
 
   const doLogout = async () => {
     setLoggingOut(true);

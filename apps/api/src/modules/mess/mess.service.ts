@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ErrorCode, isTimeRangeInvalid, MESSAGES, MessProfile, Role } from '@mess/shared';
+import { DEFAULT_SERVING_TIMES, ErrorCode, isTimeRangeInvalid, MESSAGES, MessProfile, Role, servingTimeErrors, type MealServingTimes } from '@mess/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AppException } from '../../common/http/app.exception';
 import type { RequestAuth } from '../../common/auth.types';
@@ -9,7 +9,8 @@ import { toMessProfile } from './mess.mapper';
 type MealAndTimeFields = Pick<
   CreateMessDto,
   'breakfastAvailable' | 'lunchAvailable' | 'dinnerAvailable' | 'openingTime' | 'closingTime'
->;
+> &
+  Partial<MealServingTimes>;
 
 @Injectable()
 export class MessService {
@@ -51,6 +52,10 @@ export class MessService {
       fields.meals = [MESSAGES.mealRequired];
     }
     if (isTimeRangeInvalid(values.openingTime, values.closingTime)) fields.closingTime = [MESSAGES.timeOrder];
+    const times = Object.fromEntries(
+      (Object.keys(DEFAULT_SERVING_TIMES) as (keyof MealServingTimes)[]).map((k) => [k, values[k] ?? DEFAULT_SERVING_TIMES[k]]),
+    ) as unknown as MealServingTimes;
+    Object.assign(fields, servingTimeErrors(times));
     if (Object.keys(fields).length) throw AppException.validation(fields);
   }
 }

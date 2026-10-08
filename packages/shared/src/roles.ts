@@ -33,7 +33,12 @@ export const Permission = {
   MESS_CREATE: 'mess:create',
   MESS_VIEW: 'mess:view',
   MESS_UPDATE: 'mess:update',
+  /** Team list and details (owner, manager). */
+  STAFF_VIEW: 'staff:view',
+  /** Add/edit/activate/deactivate team members and reset their password. Which roles one may manage: TEAM_MANAGEABLE_ROLES. */
   STAFF_MANAGE: 'staff:manage',
+  /** Meals served, serving times, pause cut-offs (owner, manager). Profile/contact (MESS_UPDATE) is owner-only. */
+  MESS_SETTINGS_UPDATE: 'mess:settings',
   STUDENT_VIEW: 'student:view',
   /** Create, edit, activate/deactivate students. */
   STUDENT_MANAGE: 'student:manage',
@@ -91,6 +96,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.MESS_CREATE,
     Permission.MESS_VIEW,
     Permission.MESS_UPDATE,
+    Permission.MESS_SETTINGS_UPDATE,
+    Permission.STAFF_VIEW,
     Permission.STAFF_MANAGE,
     Permission.STUDENT_VIEW,
     Permission.STUDENT_MANAGE,
@@ -123,7 +130,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   ],
   MESS_MANAGER: [
     Permission.MESS_VIEW,
-    Permission.MESS_UPDATE,
+    Permission.MESS_SETTINGS_UPDATE,
+    Permission.STAFF_VIEW,
+    Permission.STAFF_MANAGE,
     Permission.STUDENT_VIEW,
     Permission.STUDENT_MANAGE,
     Permission.STUDENT_IMPORT,
@@ -173,4 +182,20 @@ export function hasRole(role: Role | null | undefined, allowed: readonly Role[])
 
 export function can(role: Role | null | undefined, permission: Permission): boolean {
   return !!role && ROLE_PERMISSIONS[role].includes(permission);
+}
+
+/**
+ * Team hierarchy for staff management: who may add/edit/(de)activate/reset whom, and assign which role.
+ * Owner → managers and staff; manager → staff only. Nobody manages an owner or themselves here.
+ */
+export const TEAM_MANAGEABLE_ROLES: Record<Role, readonly Role[]> = {
+  PLATFORM_ADMIN: [],
+  MESS_OWNER: [Role.MESS_MANAGER, Role.MESS_STAFF],
+  MESS_MANAGER: [Role.MESS_STAFF],
+  MESS_STAFF: [],
+  STUDENT: [],
+};
+
+export function canManageTeamMember(actorRole: Role | null | undefined, targetRole: Role): boolean {
+  return !!actorRole && can(actorRole, Permission.STAFF_MANAGE) && TEAM_MANAGEABLE_ROLES[actorRole].includes(targetRole);
 }

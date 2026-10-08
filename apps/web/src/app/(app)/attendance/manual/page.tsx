@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Check, QrCode } from 'lucide-react';
-import { ATTENDANCE_NOTE_MAX, MEAL_LABELS, Permission, StudentStatus, type MealType, type ServeResult, type StudentListItem } from '@mess/shared';
+import { ATTENDANCE_NOTE_MAX, MEAL_LABELS, Permission, StudentStatus, type MealServingTimes, type MealType, type ServeResult, type StudentListItem } from '@mess/shared';
 import { MealPicker } from '@/components/attendance/meal-picker';
 import { ServeResultBanner, type BannerState } from '@/components/attendance/serve-result-banner';
 import { Button } from '@/components/ui/button';
@@ -19,8 +19,8 @@ import { useDebouncedValue } from '@/lib/use-debounce';
 import { defaultMeal, useServedMeals } from '@/lib/use-served-meals';
 
 /** Fallback when a student has no phone or the camera isn't working. Same rules as scanning. */
-function ManualEntry({ meals }: { meals: MealType[] }) {
-  const [meal, setMeal] = useState<MealType>(() => defaultMeal(meals));
+function ManualEntry({ meals, times }: { meals: MealType[]; times: MealServingTimes }) {
+  const [meal, setMeal] = useState<MealType>(() => defaultMeal(meals, times));
   const [search, setSearch] = useState('');
   const query = useDebouncedValue(search.trim(), 250);
   const [results, setResults] = useState<StudentListItem[] | null>(null);
@@ -111,7 +111,7 @@ function ManualEntry({ meals }: { meals: MealType[] }) {
 }
 
 export default function ManualAttendancePage() {
-  const meals = useServedMeals();
+  const served = useServedMeals();
   return (
     <RequireAuth permission={Permission.ATTENDANCE_MARK}>
       <div className="mx-auto mb-4 flex max-w-xl items-center justify-between gap-2">
@@ -123,7 +123,7 @@ export default function ManualAttendancePage() {
         </Link>
       </div>
       <h1 className="mx-auto mb-4 max-w-xl text-display font-bold tracking-tight">Manual attendance</h1>
-      {!meals ? <PageLoader /> : <ManualEntry meals={meals} />}
+      {!served ? <PageLoader /> : <ManualEntry meals={served.meals} times={served.times} />}
     </RequireAuth>
   );
 }

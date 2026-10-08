@@ -14,6 +14,7 @@ export function toAuthUser(user: User): AuthUser {
     status: user.status,
     emailVerified: user.emailVerified,
     mobileVerified: user.mobileVerified,
+    mustChangePassword: user.mustChangePassword,
   };
 }
 

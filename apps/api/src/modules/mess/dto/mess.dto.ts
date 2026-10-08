@@ -1,4 +1,4 @@
-import { PartialType } from '@nestjs/swagger';
+import { PartialType, PickType } from '@nestjs/swagger';
 import { IsBoolean, IsEnum, IsIn, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, ValidateIf } from 'class-validator';
 import {
   EMAIL_REGEX,
@@ -6,6 +6,7 @@ import {
   INDIAN_STATES,
   LIMITS,
   MessInput,
+  MESS_SETTINGS_FIELDS,
   MESSAGES,
   MessType,
   MOBILE_REGEX,
@@ -91,6 +92,18 @@ export class CreateMessDto implements MessInput {
   @IsOptional()
   @Matches(TIME_REGEX, { message: MESSAGES.time })
   dinnerPauseCutoff?: string;
+
+  /** HH:mm serving windows (defaults 07:30–09:30 / 12:00–14:30 / 19:30–21:30). */
+  @IsOptional() @Matches(TIME_REGEX, { message: MESSAGES.time }) breakfastStart?: string;
+  @IsOptional() @Matches(TIME_REGEX, { message: MESSAGES.time }) breakfastEnd?: string;
+  @IsOptional() @Matches(TIME_REGEX, { message: MESSAGES.time }) lunchStart?: string;
+  @IsOptional() @Matches(TIME_REGEX, { message: MESSAGES.time }) lunchEnd?: string;
+  @IsOptional() @Matches(TIME_REGEX, { message: MESSAGES.time }) dinnerStart?: string;
+  @IsOptional() @Matches(TIME_REGEX, { message: MESSAGES.time }) dinnerEnd?: string;
 }
 
+/** Owner: everything. */
 export class UpdateMessDto extends PartialType(CreateMessDto) {}
+
+/** Owner or manager: operational settings only (profile/contact fields are rejected as unknown). */
+export class UpdateMessSettingsDto extends PickType(UpdateMessDto, MESS_SETTINGS_FIELDS) {}

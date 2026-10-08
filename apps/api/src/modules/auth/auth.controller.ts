@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Patch, Post, Req, Res } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
@@ -8,7 +8,17 @@ import { CurrentAuth, Public } from '../../common/decorators/auth.decorators';
 import type { RequestAuth } from '../../common/auth.types';
 import { toAuthContext } from '../users/user.mapper';
 import { AuthResult, AuthService } from './auth.service';
-import { LoginDto, RefreshDto, RegisterOwnerDto, RequestOtpDto, VerifyOtpDto } from './dto/auth.dto';
+import {
+  ChangePasswordDto,
+  LoginDto,
+  PasswordResetConfirmDto,
+  PasswordResetRequestDto,
+  RefreshDto,
+  RegisterOwnerDto,
+  RequestOtpDto,
+  UpdateAccountDto,
+  VerifyOtpDto,
+} from './dto/auth.dto';
 
 const REFRESH_COOKIE = 'mm_refresh';
 const STRICT_LIMIT = { default: { limit: 10, ttl: 60_000 } };
@@ -78,6 +88,37 @@ export class AuthController {
   @Get('me')
   me(@CurrentAuth() auth: RequestAuth): AuthContext {
     return toAuthContext(auth);
+  }
+
+  /** Own name/email (team accounts). Role, mobile and status are not editable here. */
+  @ApiBearerAuth()
+  @Patch('me')
+  updateMe(@CurrentAuth() auth: RequestAuth, @Body() dto: UpdateAccountDto) {
+    return this.auth.updateAccount(auth, dto);
+  }
+
+  @ApiBearerAuth()
+  @Throttle(STRICT_LIMIT)
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  changePassword(@CurrentAuth() auth: RequestAuth, @Body() dto: ChangePasswordDto) {
+    return this.auth.changePassword(auth, dto);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('password-reset/request')
+  @HttpCode(HttpStatus.OK)
+  requestPasswordReset(@Body() dto: PasswordResetRequestDto) {
+    return this.auth.requestPasswordReset(dto.mobile);
+  }
+
+  @Public()
+  @Throttle(STRICT_LIMIT)
+  @Post('password-reset/confirm')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async confirmPasswordReset(@Body() dto: PasswordResetConfirmDto) {
+    await this.auth.confirmPasswordReset(dto);
   }
 
   private deliver({ response, session }: AuthResult, req: Request, res: Response): AuthResponse {

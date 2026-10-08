@@ -93,6 +93,14 @@ export class SessionService {
     throw this.expired();
   }
 
+  /** Signs a user out everywhere (optionally keeping the session making the request). */
+  async revokeAllForUser(userId: string, exceptSessionId?: string) {
+    await this.prisma.session.updateMany({
+      where: { userId, revokedAt: null, ...(exceptSessionId ? { id: { not: exceptSessionId } } : {}) },
+      data: { revokedAt: new Date() },
+    });
+  }
+
   async revoke(sessionId: string) {
     await this.prisma.session.updateMany({ where: { id: sessionId, revokedAt: null }, data: { revokedAt: new Date() } });
   }

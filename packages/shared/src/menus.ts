@@ -78,6 +78,8 @@ export type StudentMenuResponse =
       messName: string;
       /** Meals the mess normally serves (from mess settings). */
       servedMeals: Record<MealKey, boolean>;
+      /** Serving windows — Home uses these for "current / next meal". */
+      servingTimes: import('./meal-times').MealServingTimes;
       days: StudentMenuDay[];
     };
 
