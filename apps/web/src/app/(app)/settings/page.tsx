@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { can, MessStatus, Permission, type MessProfile } from '@mess/shared';
-import { MessBasicFields, MessLocationFields, MessMealFields } from '@/components/mess/mess-fields';
+import { MessBasicFields, MessLocationFields, MessMealFields, MessPauseCutoffFields } from '@/components/mess/mess-fields';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -63,6 +63,10 @@ function MessSettingsForm({ mess, onSaved }: { mess: MessProfile; onSaved: (mess
       <Card>
         <CardHeader title="Meals & timings" />
         <MessMealFields {...fieldProps} />
+      </Card>
+      <Card>
+        <CardHeader title="Meal pause cut-off" description="Students can pause today's meal only before these times. Future days can always be paused." />
+        <MessPauseCutoffFields {...fieldProps} />
       </Card>
       <Card>
         <CardHeader title="Logo" description="Logo upload will be available in a later update." />

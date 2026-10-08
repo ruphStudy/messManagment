@@ -7,3 +7,4 @@ export * from './students';
 export * from './meal-plans';
 export * from './menus';
 export * from './attendance';
+export * from './pauses';

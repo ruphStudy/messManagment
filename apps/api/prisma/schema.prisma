@@ -70,6 +70,16 @@ enum AttendanceStatus {
   REVERSED
 }
 
+enum PauseStatus {
+  ACTIVE
+  CANCELLED
+}
+
+enum PauseSource {
+  STUDENT
+  MESS
+}
+
 enum MessType {
   STUDENT_MESS
   PG_HOSTEL
@@ -109,33 +119,39 @@ model User {
   studentProfiles MessStudent[]
   servedMeals     MealAttendance[] @relation("ServedBy")
   reversedMeals   MealAttendance[] @relation("ReversedBy")
+  createdPauses   MealPause[]      @relation("PauseCreatedBy")
+  cancelledPauses MealPause[]      @relation("PauseCancelledBy")
 
   @@map("users")
 }
 
 /// A mess business (tenant). All future business records must reference messId.
 model Mess {
-  id                 String     @id @default(uuid()) @db.Uuid
-  ownerId            String     @db.Uuid
-  name               String     @db.VarChar(80)
-  mobile             String     @db.VarChar(15)
-  email              String?    @db.VarChar(120)
-  messType           MessType   @default(STUDENT_MESS)
-  foodType           FoodType   @default(VEG)
-  address            String     @db.VarChar(200)
-  city               String     @db.VarChar(60)
-  state              String     @db.VarChar(60)
-  pincode            String     @db.VarChar(6)
-  breakfastAvailable Boolean    @default(false)
-  lunchAvailable     Boolean    @default(true)
-  dinnerAvailable    Boolean    @default(true)
+  id                   String     @id @default(uuid()) @db.Uuid
+  ownerId              String     @db.Uuid
+  name                 String     @db.VarChar(80)
+  mobile               String     @db.VarChar(15)
+  email                String?    @db.VarChar(120)
+  messType             MessType   @default(STUDENT_MESS)
+  foodType             FoodType   @default(VEG)
+  address              String     @db.VarChar(200)
+  city                 String     @db.VarChar(60)
+  state                String     @db.VarChar(60)
+  pincode              String     @db.VarChar(6)
+  breakfastAvailable   Boolean    @default(false)
+  lunchAvailable       Boolean    @default(true)
+  dinnerAvailable      Boolean    @default(true)
   /// 24h "HH:mm"
-  openingTime        String?    @db.VarChar(5)
-  closingTime        String?    @db.VarChar(5)
-  logoUrl            String?
-  status             MessStatus @default(ACTIVE)
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
+  openingTime          String?    @db.VarChar(5)
+  closingTime          String?    @db.VarChar(5)
+  logoUrl              String?
+  /// HH:mm (Asia/Kolkata): same-day pauses must be made before these times
+  breakfastPauseCutoff String     @default("06:00") @db.VarChar(5)
+  lunchPauseCutoff     String     @default("09:00") @db.VarChar(5)
+  dinnerPauseCutoff    String     @default("16:00") @db.VarChar(5)
+  status               MessStatus @default(ACTIVE)
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
 
   owner         User                  @relation("MessOwner", fields: [ownerId], references: [id])
   memberships   MessMembership[]
@@ -144,6 +160,7 @@ model Mess {
   subscriptions StudentSubscription[]
   menus         DailyMenu[]
   attendance    MealAttendance[]
+  pauses        MealPause[]
 
   @@index([ownerId])
   @@map("messes")
@@ -235,6 +252,7 @@ model MessStudent {
   user            User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
   subscriptions   StudentSubscription[]
   mealAttendances MealAttendance[]
+  mealPauses      MealPause[]
 
   /// One record per person per mess (archived records are restored, not duplicated).
   @@unique([messId, mobile])
@@ -296,6 +314,7 @@ model StudentSubscription {
   student    MessStudent      @relation(fields: [studentId], references: [id], onDelete: Cascade)
   mealPlan   MealPlan?        @relation(fields: [mealPlanId], references: [id], onDelete: SetNull)
   attendance MealAttendance[]
+  mealPauses MealPause[]
 
   @@index([messId, endDate])
   @@index([messId, startDate])
@@ -365,4 +384,37 @@ model MealAttendance {
   @@index([studentId, attendanceDate])
   @@index([subscriptionId])
   @@map("meal_attendance")
+}
+
+/// "This student will not eat this meal on this date." Never creates attendance or changes credits.
+/// Kept as history when cancelled.
+model MealPause {
+  id             String      @id @default(uuid()) @db.Uuid
+  messId         String      @db.Uuid
+  studentId      String      @db.Uuid
+  /// The subscription that covered this date when the pause was made (informational).
+  subscriptionId String      @db.Uuid
+  pauseDate      DateTime    @db.Date
+  mealType       MealType
+  status         PauseStatus @default(ACTIVE)
+  /// true while ACTIVE, NULL once cancelled: with the unique key below, at most one active pause per meal.
+  activeMarker   Boolean?    @default(true)
+  source         PauseSource
+  reason         String?     @db.VarChar(120)
+  createdById    String?     @db.Uuid
+  cancelledAt    DateTime?
+  cancelledById  String?     @db.Uuid
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  mess         Mess                @relation(fields: [messId], references: [id], onDelete: Cascade)
+  student      MessStudent         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subscription StudentSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  createdBy    User?               @relation("PauseCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  cancelledBy  User?               @relation("PauseCancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
+
+  @@unique([messId, studentId, pauseDate, mealType, activeMarker])
+  @@index([messId, pauseDate, mealType])
+  @@index([studentId, pauseDate])
+  @@map("meal_pauses")
 }

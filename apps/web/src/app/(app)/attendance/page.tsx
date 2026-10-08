@@ -14,7 +14,7 @@ import {
   MEAL_LABELS,
   Permission,
   type AttendanceRecord,
-  type AttendanceSummary,
+  type ExpectedMeals,
 } from '@mess/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -62,7 +62,7 @@ function AttendanceScreen() {
   const status = list.get('status');
   const { page, search } = list;
 
-  const [summary, setSummary] = useState<AttendanceSummary | null>(null);
+  const [counts, setCounts] = useState<ExpectedMeals | null>(null);
   const [reversing, setReversing] = useState<AttendanceRecord | null>(null);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
@@ -77,7 +77,7 @@ function AttendanceScreen() {
   const { result, error, retry } = usePagedList<AttendanceRecord>(`/attendance?${apiQuery}`);
 
   const loadSummary = useCallback(() => {
-    api<AttendanceSummary>(`/attendance/summary?date=${date}`).then(setSummary).catch(() => setSummary(null));
+    api<ExpectedMeals>(`/attendance/expected?date=${date}`).then(setCounts).catch(() => setCounts(null));
   }, [date]);
   useEffect(loadSummary, [loadSummary]);
 
@@ -119,13 +119,21 @@ function AttendanceScreen() {
         }
       />
 
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[...MEAL_KEYS, 'total' as const].map((key) => (
-          <Card key={key} className="p-4 sm:p-4">
-            <p className="text-sm text-ink-muted">{key === 'total' ? 'Total served' : MEAL_LABELS[key]}</p>
-            <p className="text-2xl font-bold">{summary ? summary[key] : '–'}</p>
-          </Card>
-        ))}
+      {/* Expected excludes paused students; served is what was actually given. */}
+      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+        {MEAL_KEYS.map((key) => {
+          const c = counts?.meals[key];
+          return (
+            <Card key={key} className="p-4 sm:p-4">
+              <p className="text-sm font-medium">{MEAL_LABELS[key]}</p>
+              <p className="text-2xl font-bold">
+                {c ? c.served : '–'}
+                <span className="ml-1 text-sm font-normal text-ink-muted">/ {c ? c.expected : '–'} served</span>
+              </p>
+              <p className="text-sm text-ink-muted">{c ? `${c.remaining} remaining · ${c.paused} paused` : ' '}</p>
+            </Card>
+          );
+        })}
       </div>
 
       <div className="mb-4 flex flex-wrap items-end gap-2">

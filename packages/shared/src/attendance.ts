@@ -108,6 +108,8 @@ export type MealQrResponse =
       meals: Record<MealType, boolean>;
       /** Meals already served today. */
       servedToday: MealType[];
+      /** Meals the student paused for today. */
+      pausedToday: MealType[];
     };
 
 export interface StudentAttendanceItem {
@@ -141,6 +143,8 @@ export function serveRejectionMessage(reason: ErrorCode | string, mealType: Meal
       return 'No meals remaining.';
     case 'ALREADY_SERVED':
       return `${meal} already served today.`;
+    case 'MEAL_PAUSED':
+      return `${meal} is paused for today.`;
     default:
       return 'Unable to serve this meal.';
   }

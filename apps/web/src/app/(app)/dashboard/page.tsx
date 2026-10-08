@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, Circle } from 'lucide-react';
-import { addDays, businessToday, can, MEAL_KEYS, MEAL_LABELS, Permission, Role, startOfWeek, type AttendanceSummary, type MealPlan, type MenuDay } from '@mess/shared';
+import { addDays, businessToday, can, MEAL_KEYS, MEAL_LABELS, Permission, Role, startOfWeek, type AttendanceSummary, type ExpectedMeals, type MealPlan, type MenuDay } from '@mess/shared';
 import { MenuStatusBadge } from '@/components/menu/menu-status-badge';
 import { mealSummary } from '@/lib/menu';
 import { api, apiEnvelope } from '@/lib/api';
@@ -58,6 +58,34 @@ function TodayAttendanceCard({ canScan }: { canScan: boolean }) {
         ))}
       </dl>
       <Link href="/attendance" className="mt-3 inline-flex min-h-11 items-center font-semibold text-brand-700 hover:underline">View attendance →</Link>
+    </Card>
+  );
+}
+
+/** Deterministic planning numbers: plans valid tomorrow minus pauses. */
+function TomorrowMealsCard() {
+  const [counts, setCounts] = useState<ExpectedMeals | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    api<ExpectedMeals>(`/attendance/expected?date=${addDays(businessToday(), 1)}`).then(setCounts).catch(() => setFailed(true));
+  }, []);
+  return (
+    <Card className="md:col-span-5">
+      <CardHeader title="Tomorrow's meals" description="Students on a plan, minus those who paused" />
+      {failed ? (
+        <p className="text-sm text-ink-muted">Couldn&apos;t load tomorrow&apos;s counts.</p>
+      ) : (
+        <dl className="grid grid-cols-3 gap-3">
+          {MEAL_KEYS.map((key) => (
+            <div key={key}>
+              <dt className="text-sm text-ink-muted">{MEAL_LABELS[key]}</dt>
+              <dd className="text-2xl font-bold">{counts ? counts.meals[key].expected : '–'}</dd>
+              <dd className="text-xs text-ink-muted">{counts ? `${counts.meals[key].paused} paused` : ' '}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      <Link href={`/pauses?from=${addDays(businessToday(), 1)}`} className="mt-3 inline-flex min-h-11 items-center font-semibold text-brand-700 hover:underline">See who paused →</Link>
     </Card>
   );
 }
@@ -125,6 +153,7 @@ export default function DashboardPage() {
       <PageHeader title={`Welcome, ${session.user.firstName}!`} description={session.membership.mess.name} />
 
       <div className="grid gap-4 md:grid-cols-5">
+        <TomorrowMealsCard />
         <TodayAttendanceCard canScan={can(session.role, Permission.ATTENDANCE_MARK)} />
         <TodayMenuCard />
         <Card className="md:col-span-3">

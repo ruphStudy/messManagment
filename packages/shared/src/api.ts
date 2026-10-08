@@ -39,6 +39,13 @@ export const ErrorCode = {
   ALREADY_SERVED: 'ALREADY_SERVED',
   ATTENDANCE_NOT_FOUND: 'ATTENDANCE_NOT_FOUND',
   ATTENDANCE_ALREADY_REVERSED: 'ATTENDANCE_ALREADY_REVERSED',
+  MEAL_PAUSED: 'MEAL_PAUSED',
+  PAUSE_CUTOFF_PASSED: 'PAUSE_CUTOFF_PASSED',
+  PAUSE_DATE_PAST: 'PAUSE_DATE_PAST',
+  PAUSE_ALREADY_EXISTS: 'PAUSE_ALREADY_EXISTS',
+  PAUSE_NOT_FOUND: 'PAUSE_NOT_FOUND',
+  PAUSE_ALREADY_CANCELLED: 'PAUSE_ALREADY_CANCELLED',
+  ATTENDANCE_ALREADY_SERVED: 'ATTENDANCE_ALREADY_SERVED',
   RATE_LIMITED: 'RATE_LIMITED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;
@@ -136,7 +143,14 @@ export interface VerifyOtpRequest {
   code: string;
 }
 
-export interface MessProfile {
+export interface MessPauseCutoffs {
+  /** HH:mm — same-day pauses must be made before this time. */
+  breakfastPauseCutoff: string;
+  lunchPauseCutoff: string;
+  dinnerPauseCutoff: string;
+}
+
+export interface MessProfile extends MessPauseCutoffs {
   id: string;
   name: string;
   mobile: string;
@@ -158,4 +172,5 @@ export interface MessProfile {
   updatedAt: string;
 }
 
-export type MessInput = Omit<MessProfile, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'logoUrl'>;
+export type MessInput = Omit<MessProfile, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'logoUrl' | keyof MessPauseCutoffs> &
+  Partial<MessPauseCutoffs>;

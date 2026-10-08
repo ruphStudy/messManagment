@@ -6,11 +6,13 @@ import { Card, Screen } from '@/components/layout';
 import { NotLinkedCard } from '@/components/not-linked';
 import { ErrorState, FullScreenLoader } from '@/components/states';
 import { SubscriptionCard } from '@/components/subscription-card';
+import { TodayMealsStrip } from '@/components/today-meals-strip';
 import { TodayMenuPreview } from '@/components/today-menu-preview';
 import { AppText } from '@/components/text';
 import { useAuth } from '@/lib/auth';
 import { formatDate, useStudentProfile } from '@/lib/student-profile';
 import { useMySubscription } from '@/lib/use-my-subscription';
+import { usePauseSettings } from '@/lib/use-pause-settings';
 import { useStudentMenu } from '@/lib/use-student-menu';
 import { colors, spacing, TOUCH_TARGET } from '@/theme/tokens';
 
@@ -49,6 +51,7 @@ export default function HomeScreen() {
   const profileState = useStudentProfile();
   const subscription = useMySubscription();
   const todayMenu = useStudentMenu('today');
+  const pauseSettings = usePauseSettings();
   const { data, loading, error } = profileState;
 
   if (!data && loading) return <FullScreenLoader />;
@@ -59,6 +62,7 @@ export default function HomeScreen() {
     void profileState.reload();
     void subscription.reload();
     void todayMenu.reload();
+    void pauseSettings.reload();
   };
 
   return (
@@ -81,6 +85,7 @@ export default function HomeScreen() {
               </AppText>
             </Card>
           )}
+          {pauseSettings.data?.linked && <TodayMealsStrip meals={pauseSettings.data.todayMeals} />}
           <TodayMenuPreview data={todayMenu.data} />
           <PlanSection data={subscription.data} error={subscription.error} reload={subscription.reload} />
         </>

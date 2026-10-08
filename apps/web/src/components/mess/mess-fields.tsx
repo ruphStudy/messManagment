@@ -191,3 +191,29 @@ export function MessMealFields({ values, errors, setField, disabled }: MessField
     </div>
   );
 }
+
+const CUTOFF_FIELDS = [
+  { key: 'breakfastPauseCutoff', label: 'Breakfast', served: 'breakfastAvailable' },
+  { key: 'lunchPauseCutoff', label: 'Lunch', served: 'lunchAvailable' },
+  { key: 'dinnerPauseCutoff', label: 'Dinner', served: 'dinnerAvailable' },
+] as const;
+
+/** Latest time students can pause a meal for the same day (Indian time). */
+export function MessPauseCutoffFields({ values, errors, setField, disabled }: MessFieldsProps) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-3">
+      {CUTOFF_FIELDS.filter((f) => values[f.served]).map((f) => (
+        <Input
+          key={f.key}
+          id={f.key}
+          type="time"
+          label={`${f.label} — pause before`}
+          disabled={disabled}
+          value={values[f.key] ?? ''}
+          error={errors[f.key]}
+          onChange={(e) => setField(f.key, e.target.value)}
+        />
+      ))}
+    </div>
+  );
+}

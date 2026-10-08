@@ -59,6 +59,9 @@ export function validateMess(v: MessFormValues): FieldErrors<MessFormValues> {
     pincode: firstError(v.pincode, validators.required, validators.pincode),
     meals: v.breakfastAvailable || v.lunchAvailable || v.dinnerAvailable ? undefined : MESSAGES.mealRequired,
     openingTime: validators.optionalTime(v.openingTime),
+    breakfastPauseCutoff: v.breakfastPauseCutoff !== undefined ? validators.optionalTime(v.breakfastPauseCutoff) : undefined,
+    lunchPauseCutoff: v.lunchPauseCutoff !== undefined ? validators.optionalTime(v.lunchPauseCutoff) : undefined,
+    dinnerPauseCutoff: v.dinnerPauseCutoff !== undefined ? validators.optionalTime(v.dinnerPauseCutoff) : undefined,
     closingTime:
       validators.optionalTime(v.closingTime) ??
       (isTimeRangeInvalid(v.openingTime, v.closingTime) ? MESSAGES.timeOrder : undefined),

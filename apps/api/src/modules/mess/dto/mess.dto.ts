@@ -78,6 +78,19 @@ export class CreateMessDto implements MessInput {
   @ValidateIf((_, v) => v !== null)
   @Matches(TIME_REGEX, { message: MESSAGES.time })
   closingTime: string | null;
+
+  /** HH:mm — same-day pause cut-offs (defaults 06:00 / 09:00 / 16:00). */
+  @IsOptional()
+  @Matches(TIME_REGEX, { message: MESSAGES.time })
+  breakfastPauseCutoff?: string;
+
+  @IsOptional()
+  @Matches(TIME_REGEX, { message: MESSAGES.time })
+  lunchPauseCutoff?: string;
+
+  @IsOptional()
+  @Matches(TIME_REGEX, { message: MESSAGES.time })
+  dinnerPauseCutoff?: string;
 }
 
 export class UpdateMessDto extends PartialType(CreateMessDto) {}

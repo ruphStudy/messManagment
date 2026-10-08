@@ -5,6 +5,7 @@ import {
   businessToday,
   ErrorCode,
   MEAL_KEYS,
+  PauseStatus,
   serveRejectionMessage,
   StudentStatus,
   SubscriptionStatus,
@@ -49,7 +50,7 @@ class ServeRejection extends Error {
 /**
  * Meal attendance. All serving (QR and manual) goes through `serve()`, which runs the full rule chain
  * inside one transaction holding the student's lock:
- *   student in this mess → student active → subscription valid today → meal included
+ *   student in this mess → student active → subscription valid today → meal included → meal not paused
  *   → not already served → (limited plan) one credit consumed → attendance created.
  * A rejection never writes anything. The unique key on meal_attendance backs up the duplicate check.
  */
@@ -150,10 +151,14 @@ export class AttendanceService {
 
     const today = businessToday();
     const studentName = [student.firstName, student.lastName].filter(Boolean).join(' ');
-    const [subscription, served] = await Promise.all([
+    const [subscription, served, paused] = await Promise.all([
       this.currentSubscription(this.prisma, student.id, today),
       this.prisma.mealAttendance.findMany({
         where: { studentId: student.id, attendanceDate: fromDateString(today), status: AttendanceStatus.SERVED },
+        select: { mealType: true },
+      }),
+      this.prisma.mealPause.findMany({
+        where: { studentId: student.id, pauseDate: fromDateString(today), status: PauseStatus.ACTIVE },
         select: { mealType: true },
       }),
     ]);
@@ -170,6 +175,7 @@ export class AttendanceService {
       planName: subscription.planName,
       meals: { breakfast: subscription.breakfastIncluded, lunch: subscription.lunchIncluded, dinner: subscription.dinnerIncluded },
       servedToday: served.map((s) => s.mealType),
+      pausedToday: paused.map((p) => p.mealType),
     };
   }
 
@@ -213,6 +219,12 @@ export class AttendanceService {
         if (!subscription) throw new ServeRejection(ErrorCode.NO_ACTIVE_SUBSCRIPTION);
         identified.planName = subscription.planName;
         if (!subscription[INCLUDED[mealType]]) throw new ServeRejection(ErrorCode.MEAL_NOT_INCLUDED);
+
+        // An active pause means the student said they won't eat this meal; they must cancel it first.
+        const paused = await tx.mealPause.count({
+          where: { studentId: student.id, pauseDate: fromDateString(today), mealType, status: PauseStatus.ACTIVE },
+        });
+        if (paused) throw new ServeRejection(ErrorCode.MEAL_PAUSED);
 
         const alreadyServed = await tx.mealAttendance.count({
           where: { studentId: student.id, attendanceDate: fromDateString(today), mealType, status: AttendanceStatus.SERVED },

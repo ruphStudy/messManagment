@@ -56,6 +56,9 @@ export const Permission = {
   ATTENDANCE_MARK: 'attendance:mark',
   /** Reverse a served meal (restores the credit). */
   ATTENDANCE_REVERSE: 'attendance:reverse',
+  PAUSE_VIEW: 'pause:view',
+  /** Add or cancel pauses for students. */
+  PAUSE_MANAGE: 'pause:manage',
   STUDENT_SELF: 'student:self',
 } as const;
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -81,6 +84,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.ATTENDANCE_VIEW,
     Permission.ATTENDANCE_MARK,
     Permission.ATTENDANCE_REVERSE,
+    Permission.PAUSE_VIEW,
+    Permission.PAUSE_MANAGE,
   ],
   MESS_MANAGER: [
     Permission.MESS_VIEW,
@@ -97,6 +102,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.ATTENDANCE_VIEW,
     Permission.ATTENDANCE_MARK,
     Permission.ATTENDANCE_REVERSE,
+    Permission.PAUSE_VIEW,
+    Permission.PAUSE_MANAGE,
   ],
   MESS_STAFF: [
     Permission.MESS_VIEW,
@@ -106,6 +113,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.MENU_VIEW,
     Permission.ATTENDANCE_VIEW,
     Permission.ATTENDANCE_MARK,
+    Permission.PAUSE_VIEW,
   ],
   STUDENT: [Permission.STUDENT_SELF],
 };

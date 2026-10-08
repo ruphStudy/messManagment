@@ -117,11 +117,14 @@ export default function QrScreen() {
         <View style={styles.meals}>
           {MEAL_KEYS.filter((k) => data.meals[k]).map((k) => {
             const served = data.servedToday.includes(k);
+            const paused = data.pausedToday.includes(k);
+            const label = served ? 'Served' : paused ? 'Paused' : 'Available';
+            const color = served ? colors.success : paused ? colors.brand700 : colors.inkMuted;
             return (
-              <View key={k} style={styles.meal} accessibilityLabel={`${MEAL_LABELS[k]} ${served ? 'served' : 'not yet served'}`}>
-                <Ionicons name={served ? 'checkmark-circle' : 'ellipse-outline'} size={20} color={served ? colors.success : colors.placeholder} />
-                <AppText style={served ? { color: colors.success, fontWeight: '600' } : undefined}>
-                  {MEAL_LABELS[k]}{served ? ' · Served' : ''}
+              <View key={k} style={styles.meal} accessibilityLabel={`${MEAL_LABELS[k]} ${label}`}>
+                <Ionicons name={served ? 'checkmark-circle' : paused ? 'pause-circle' : 'ellipse-outline'} size={20} color={color} />
+                <AppText style={{ color, fontWeight: served || paused ? '600' : '400' }}>
+                  {MEAL_LABELS[k]} · {label}
                 </AppText>
               </View>
             );
