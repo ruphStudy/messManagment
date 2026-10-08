@@ -67,6 +67,8 @@ export const Permission = {
   /** Add, edit, reverse expenses and manage categories. */
   EXPENSE_MANAGE: 'expense:manage',
   FINANCE_VIEW: 'finance:view',
+  /** Send payment/manual reminders and run expiry reminders. Staff cannot. */
+  REMINDER_SEND: 'reminder:send',
   STUDENT_SELF: 'student:self',
 } as const;
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -100,6 +102,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.EXPENSE_VIEW,
     Permission.EXPENSE_MANAGE,
     Permission.FINANCE_VIEW,
+    Permission.REMINDER_SEND,
   ],
   MESS_MANAGER: [
     Permission.MESS_VIEW,
@@ -124,6 +127,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.EXPENSE_VIEW,
     Permission.EXPENSE_MANAGE,
     Permission.FINANCE_VIEW,
+    Permission.REMINDER_SEND,
   ],
   MESS_STAFF: [
     Permission.MESS_VIEW,

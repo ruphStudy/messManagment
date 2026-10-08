@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { PauseSource, Prisma, type User } from '@prisma/client';
+import { NotificationType, PauseSource, Prisma, type User } from '@prisma/client';
 import {
   addDays,
   AttendanceStatus,
@@ -7,8 +7,11 @@ import {
   businessToday,
   daysBetween,
   ErrorCode,
+  formatShortDate,
   isPauseCutoffPassed,
   MEAL_KEYS,
+  MEAL_LABELS,
+  NotificationScreen,
   PAUSE_MAX_DAYS,
   pauseOutcomeMessage,
   PauseStatus,
@@ -25,6 +28,7 @@ import { lockStudent } from '../../common/db/student-lock';
 import { AppException } from '../../common/http/app.exception';
 import { fromDateString, toDateString } from '../../common/http/dates';
 import { Paginated, PaginationQueryDto } from '../../common/http/pagination';
+import { NotificationsService } from '../notifications/notifications.service';
 import { StudentsService } from '../students/students.service';
 import { studentSearchTerms } from '../students/student-search';
 import { CreatePauseDto, ListPausesQueryDto } from './dto/pause.dto';
@@ -36,6 +40,7 @@ interface PauseActor {
   userId: string;
   source: PauseSource;
 }
+
 
 const INCLUDED = { breakfast: 'breakfastIncluded', lunch: 'lunchIncluded', dinner: 'dinnerIncluded' } as const;
 const CUTOFF = { breakfast: 'breakfastPauseCutoff', lunch: 'lunchPauseCutoff', dinner: 'dinnerPauseCutoff' } as const;
@@ -64,6 +69,7 @@ export class PausesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly students: StudentsService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   /** Expands the request into date × meal pauses, creating the eligible ones in one locked transaction. */
@@ -79,7 +85,7 @@ export class PausesService {
     const from = fromDateString(dto.fromDate);
     const to = fromDateString(dto.toDate);
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       await lockStudent(tx, actor.studentId);
       const student = await tx.messStudent.findFirst({
         where: { id: actor.studentId, messId: actor.messId },
@@ -146,6 +152,25 @@ export class PausesService {
       }
       return result;
     });
+    // After commit and best-effort: a notification problem never undoes the pause.
+    if (result.created.length) await this.notifyPauses(actor.studentId, actor.messId, result.created, 'created');
+    return result;
+  }
+
+  /** One summary notification per request (never one per meal/day). */
+  private async notifyPauses(studentId: string, messId: string, items: { date: string; mealType: MealType }[], kind: 'created' | 'cancelled') {
+    const student = await this.prisma.messStudent.findUnique({ where: { id: studentId }, select: { userId: true } });
+    if (!student?.userId) return;
+    const meals = MEAL_KEYS.filter((m) => items.some((i) => i.mealType === m)).map((m) => MEAL_LABELS[m]);
+    const dates = [...new Set(items.map((i) => i.date))].sort();
+    const range = dates.length === 1 ? formatShortDate(dates[0]) : `${formatShortDate(dates[0])} – ${formatShortDate(dates[dates.length - 1])}`;
+    const what = items.length === 1 ? meals[0] : `${items.length} meals (${meals.join(', ')})`;
+    await this.notifications.notifySafely([{ userId: student.userId, messId }], {
+      type: kind === 'created' ? NotificationType.MEAL_PAUSE_CREATED : NotificationType.MEAL_PAUSE_CANCELLED,
+      title: kind === 'created' ? `${what} paused` : `${what} pause cancelled`,
+      body: kind === 'created' ? `${what} paused for ${range}.` : `${what} pause for ${range} cancelled. You are expected for this meal again.`,
+      data: { screen: NotificationScreen.PAUSE },
+    });
   }
 
   /** Cancels an active pause for today or later; the row is kept as history. `studentId` scopes student self-service. */
@@ -169,6 +194,7 @@ export class PausesService {
     });
 
     const row = await this.prisma.mealPause.findUniqueOrThrow({ where: { id }, include: pauseInclude });
+    await this.notifyPauses(row.studentId, messId, [{ date: toDateString(row.pauseDate), mealType: row.mealType }], 'cancelled');
     return toPauseRecord(row, businessToday());
   }
 

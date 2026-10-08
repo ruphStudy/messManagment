@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { AuthContext, AuthResponse, RequestOtpResponse } from '@mess/shared';
 import { api, logoutRequest, onSessionExpired, refreshSession, storeSession } from './api';
+import { unregisterPush } from './push';
 import { useToast } from '@/components/toast';
 
 type Status = 'loading' | 'authenticated' | 'guest';
@@ -65,6 +66,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
+      // Stop push to this phone for this user while we still have a valid session.
+      await unregisterPush();
       await logoutRequest();
     } finally {
       setSession(null);

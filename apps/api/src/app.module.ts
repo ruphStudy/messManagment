@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -18,12 +19,16 @@ import { AttendanceModule } from './modules/attendance/attendance.module';
 import { PausesModule } from './modules/pauses/pauses.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { RemindersModule } from './modules/reminders/reminders.module';
 
 @Module({
   imports: [
     ConfigModule,
     PrismaModule,
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 120 }]),
+    ScheduleModule.forRoot(),
+    NotificationsModule,
     AuthModule,
     MessModule,
     StudentsModule,
@@ -34,6 +39,7 @@ import { ExpensesModule } from './modules/expenses/expenses.module';
     PausesModule,
     PaymentsModule,
     ExpensesModule,
+    RemindersModule,
   ],
   controllers: [HealthController],
   providers: [

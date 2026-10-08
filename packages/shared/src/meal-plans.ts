@@ -211,3 +211,9 @@ export function durationLabel(durationType: PlanDurationType, durationValue: num
   const unit = durationType === PlanDurationType.DAYS ? 'day' : 'month';
   return `${durationValue} ${unit}${durationValue === 1 ? '' : 's'}`;
 }
+
+const shortDateFormat = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+/** "2026-10-12" → "12 Oct" (calendar date, no timezone shift). */
+export function formatShortDate(date: string): string {
+  return shortDateFormat.format(new Date(`${date}T00:00:00Z`));
+}

@@ -9,12 +9,30 @@ import { formatDate, formatMobile, fullName } from '@/lib/format';
 import { PaymentStatusBadge } from './payment-badges';
 
 /** Subscriptions with fee / paid / due — used by Pending dues and Monthly status. */
-export function DueList({ items, onRecord }: { items: DueItem[]; onRecord?: (item: DueItem) => void }) {
+interface DueListProps {
+  items: DueItem[];
+  onRecord?: (item: DueItem) => void;
+  onRemind?: (item: DueItem) => void;
+  /** Optional row selection (by student) for bulk reminders. */
+  selected?: Set<string>;
+  onToggle?: (studentId: string) => void;
+}
+
+export function DueList({ items, onRecord, onRemind, selected, onToggle }: DueListProps) {
   return (
     <ul className="flex flex-col gap-2">
       {items.map((d) => (
         <li key={d.subscriptionId}>
           <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:p-4">
+            {onToggle && (
+              <input
+                type="checkbox"
+                aria-label={`Select ${fullName(d.student)}`}
+                className="size-5 shrink-0 accent-brand-600"
+                checked={selected?.has(d.student.id) ?? false}
+                onChange={() => onToggle(d.student.id)}
+              />
+            )}
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <Link href={`/students/${d.student.id}`} className="font-semibold hover:underline">{fullName(d.student)}</Link>
@@ -30,7 +48,10 @@ export function DueList({ items, onRecord }: { items: DueItem[]; onRecord?: (ite
               <div><dt className="text-ink-muted">Paid</dt><dd className="font-medium">{formatPaise(d.payment.paidPaise)}</dd></div>
               <div><dt className="text-ink-muted">Due</dt><dd className="font-bold text-danger">{formatPaise(d.payment.duePaise)}</dd></div>
             </dl>
-            {onRecord && d.payment.duePaise > 0 && <Button size="sm" onClick={() => onRecord(d)}>Record payment</Button>}
+            <div className="flex gap-2">
+              {onRemind && d.payment.duePaise > 0 && <Button size="sm" variant="secondary" onClick={() => onRemind(d)}>Remind</Button>}
+              {onRecord && d.payment.duePaise > 0 && <Button size="sm" onClick={() => onRecord(d)}>Record payment</Button>}
+            </div>
           </Card>
         </li>
       ))}

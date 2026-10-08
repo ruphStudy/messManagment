@@ -97,6 +97,29 @@ enum ExpenseStatus {
   REVERSED
 }
 
+enum NotificationType {
+  PAYMENT_DUE
+  SUBSCRIPTION_EXPIRING
+  SUBSCRIPTION_EXPIRED
+  MENU_CHANGED
+  MEAL_PAUSE_CREATED
+  MEAL_PAUSE_CANCELLED
+  MANUAL_REMINDER
+  SYSTEM
+}
+
+enum PushStatus {
+  NOT_SENT
+  PENDING
+  SENT
+  FAILED
+}
+
+enum PushPlatform {
+  IOS
+  ANDROID
+}
+
 enum MessType {
   STUDENT_MESS
   PG_HOSTEL
@@ -130,18 +153,22 @@ model User {
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
-  ownedMesses      Mess[]           @relation("MessOwner")
-  memberships      MessMembership[]
-  sessions         Session[]
-  studentProfiles  MessStudent[]
-  recordedExpenses Expense[]        @relation("ExpenseRecordedBy")
-  reversedExpenses Expense[]        @relation("ExpenseReversedBy")
-  recordedPayments Payment[]        @relation("PaymentRecordedBy")
-  reversedPayments Payment[]        @relation("PaymentReversedBy")
-  servedMeals      MealAttendance[] @relation("ServedBy")
-  reversedMeals    MealAttendance[] @relation("ReversedBy")
-  createdPauses    MealPause[]      @relation("PauseCreatedBy")
-  cancelledPauses  MealPause[]      @relation("PauseCancelledBy")
+  ownedMesses            Mess[]                  @relation("MessOwner")
+  memberships            MessMembership[]
+  sessions               Session[]
+  studentProfiles        MessStudent[]
+  notifications          Notification[]          @relation("NotificationRecipient")
+  sentNotifications      Notification[]          @relation("NotificationSender")
+  pushDevices            PushDevice[]
+  notificationPreference NotificationPreference?
+  recordedExpenses       Expense[]               @relation("ExpenseRecordedBy")
+  reversedExpenses       Expense[]               @relation("ExpenseReversedBy")
+  recordedPayments       Payment[]               @relation("PaymentRecordedBy")
+  reversedPayments       Payment[]               @relation("PaymentReversedBy")
+  servedMeals            MealAttendance[]        @relation("ServedBy")
+  reversedMeals          MealAttendance[]        @relation("ReversedBy")
+  createdPauses          MealPause[]             @relation("PauseCreatedBy")
+  cancelledPauses        MealPause[]             @relation("PauseCancelledBy")
 
   @@map("users")
 }
@@ -187,6 +214,7 @@ model Mess {
   payments          Payment[]
   expenseCategories ExpenseCategory[]
   expenses          Expense[]
+  notifications     Notification[]
 
   @@index([ownerId])
   @@map("messes")
@@ -535,4 +563,67 @@ model Expense {
   @@index([messId, categoryId, expenseDate])
   @@index([messId, status, expenseDate])
   @@map("expenses")
+}
+
+/// One in-app notification for one user. Push is an optional extra delivery recorded in pushStatus.
+model Notification {
+  id          String           @id @default(uuid()) @db.Uuid
+  /// Mess context (null only for platform-wide system notices).
+  messId      String?          @db.Uuid
+  userId      String           @db.Uuid
+  type        NotificationType
+  title       String           @db.VarChar(80)
+  body        String           @db.VarChar(300)
+  /// Small routing payload, e.g. { "screen": "payments" }. Never secrets.
+  data        Json?
+  /// Same key for the same user is stored once (expiry reminders, double clicks, repeated menu edits).
+  dedupeKey   String?          @db.VarChar(150)
+  pushStatus  PushStatus       @default(NOT_SENT)
+  createdById String?          @db.Uuid
+  readAt      DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  mess      Mess? @relation(fields: [messId], references: [id], onDelete: Cascade)
+  user      User  @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy User? @relation("NotificationSender", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+  @@index([messId, type, createdAt])
+  @@map("notifications")
+}
+
+/// A device that can receive push for a user. A token belongs to one device; it moves to whoever signs in there.
+model PushDevice {
+  id          String       @id @default(uuid()) @db.Uuid
+  userId      String       @db.Uuid
+  platform    PushPlatform
+  pushToken   String       @unique @db.VarChar(200)
+  deviceLabel String?      @db.VarChar(80)
+  isActive    Boolean      @default(true)
+  lastSeenAt  DateTime     @default(now())
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@map("push_devices")
+}
+
+/// Per-user switches. Missing row = all defaults (true).
+model NotificationPreference {
+  userId                    String   @id @db.Uuid
+  paymentDueEnabled         Boolean  @default(true)
+  subscriptionExpiryEnabled Boolean  @default(true)
+  menuUpdatesEnabled        Boolean  @default(true)
+  pauseUpdatesEnabled       Boolean  @default(true)
+  pushEnabled               Boolean  @default(true)
+  updatedAt                 DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
 }

@@ -6,6 +6,7 @@ import {
   daysBetween,
   ErrorCode,
   MENU_LIMITS,
+  NotificationScreen,
   startOfWeek,
   StudentMenuRange,
   weekDates,
@@ -14,7 +15,9 @@ import {
   type MenuDay,
   type StudentMenuResponse,
 } from '@mess/shared';
+import { NotificationType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { AppException } from '../../common/http/app.exception';
 import { fromDateString, toDateString } from '../../common/http/dates';
 import { StudentsService } from '../students/students.service';
@@ -33,6 +36,7 @@ export class MenusService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly students: StudentsService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async getDay(messId: string, date: string): Promise<MenuDay> {
@@ -53,12 +57,35 @@ export class MenusService {
   /** Creates or replaces the day's content. Publish state is kept as it was. */
   async save(messId: string, date: string, dto: DailyMenuDto): Promise<DailyMenu> {
     const content = toContentData(dto);
+    const before = await this.find(messId, date);
     const row = await this.prisma.dailyMenu.upsert({
       where: { messId_menuDate: { messId, menuDate: fromDateString(date) } },
       create: { ...content, messId, menuDate: fromDateString(date) },
       update: content,
     });
+    if (before?.isPublished) await this.notifyMenuChanged(messId, date, before, row);
     return toDailyMenu(row);
+  }
+
+  /**
+   * Students hear about changes to an ALREADY PUBLISHED menu for today or tomorrow, and only when visible
+   * content changed. First publish and draft edits stay silent. Repeated edits within 10 minutes = one notice.
+   */
+  private async notifyMenuChanged(messId: string, date: string, before: MenuRow, after: MenuRow) {
+    const today = businessToday();
+    if (date !== today && date !== addDays(today, 1)) return;
+    const visible = (m: MenuRow) => JSON.stringify(toContentData(toMenuInput(m)));
+    if (visible(before) === visible(after)) return;
+
+    const when = date === today ? "Today's" : "Tomorrow's";
+    const window = Math.floor(Date.now() / (10 * 60_000));
+    const targets = await this.notifications.activeStudentTargets(messId, `menu-changed:${messId}:${date}:${window}`);
+    await this.notifications.notifySafely(targets, {
+      type: NotificationType.MENU_CHANGED,
+      title: `${when} menu has changed`,
+      body: `${when} menu was updated. Tap to see what's cooking.`,
+      data: { screen: NotificationScreen.MENU, date },
+    });
   }
 
   async setPublished(messId: string, date: string, published: boolean): Promise<DailyMenu> {

@@ -11,6 +11,7 @@ import { ConfirmDialog } from '@/components/ui/modal';
 import { useAuth } from '@/lib/auth/auth-context';
 import { cn } from '@/lib/cn';
 import { navForRole } from '@/lib/navigation';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 
 function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const { session } = useAuth();
@@ -170,6 +171,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold">{session?.membership?.mess.name}</p>
         </div>
+        <NotificationBell />
         <UserMenu onLogout={() => setConfirmLogout(true)} />
       </header>
 

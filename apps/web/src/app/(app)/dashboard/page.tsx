@@ -89,7 +89,7 @@ function PaymentsCard({ canRecord }: { canRecord: boolean }) {
       </dl>
       <div className="mt-3 flex flex-wrap gap-2">
         {canRecord && <Link href="/payments?record=1" className="inline-flex min-h-11 items-center rounded-control bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Record payment</Link>}
-        <Link href="/payments/dues" className="inline-flex min-h-11 items-center rounded-control border border-border px-4 text-sm font-semibold hover:bg-canvas">View dues</Link>
+        <Link href="/payments/dues" className="inline-flex min-h-11 items-center rounded-control border border-border px-4 text-sm font-semibold hover:bg-canvas">View dues / Send reminders</Link>
       </div>
     </Card>
   );

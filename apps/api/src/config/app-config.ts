@@ -12,6 +12,12 @@ export interface AppConfig {
   otpResendSeconds: number;
   otpMaxAttempts: number;
   otpDevEcho: boolean;
+  /** expo = real push via Expo; log = write to server log (dev); disabled = in-app only. */
+  pushProvider: 'expo' | 'log' | 'disabled';
+  expoPushUrl: string;
+  expoAccessToken: string | null;
+  /** Run the daily expiry-reminder job in this process. */
+  schedulerEnabled: boolean;
 }
 
 export const APP_CONFIG = Symbol('APP_CONFIG');
@@ -62,5 +68,15 @@ export function loadConfig(): AppConfig {
     otpResendSeconds: int('OTP_RESEND_SECONDS', 30),
     otpMaxAttempts: int('OTP_MAX_ATTEMPTS', 5),
     otpDevEcho: !isProduction && process.env.OTP_DEV_ECHO === 'true',
+    pushProvider: pushProvider(isProduction),
+    expoPushUrl: process.env.EXPO_PUSH_URL ?? 'https://exp.host/--/api/v2/push/send',
+    expoAccessToken: process.env.EXPO_ACCESS_TOKEN || null,
+    schedulerEnabled: process.env.SCHEDULER_ENABLED !== 'false',
   };
+}
+
+function pushProvider(isProduction: boolean): AppConfig['pushProvider'] {
+  const value = process.env.PUSH_PROVIDER ?? (isProduction ? 'expo' : 'log');
+  if (value !== 'expo' && value !== 'log' && value !== 'disabled') throw new Error(`Unsupported PUSH_PROVIDER "${value}"`);
+  return value;
 }

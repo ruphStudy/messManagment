@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Archive, ArchiveRestore, Pencil, Power } from 'lucide-react';
+import { Archive, ArchiveRestore, BellRing, Pencil, Power } from 'lucide-react';
+import { SendReminderDialog } from '@/components/notifications/send-reminder-dialog';
 import { can, Permission, StudentStatus, type StudentDetail } from '@mess/shared';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/modal';
@@ -25,6 +26,8 @@ export function StudentActions({ student, onChange }: { student: StudentDetail; 
   const { session } = useAuth();
   const toast = useToast();
   const [confirm, setConfirm] = useState<'deactivate' | 'archive' | null>(null);
+  const [reminding, setReminding] = useState(false);
+  const canRemind = can(session?.role, Permission.REMINDER_SEND);
   const [busy, setBusy] = useState<Action | null>(null);
 
   const canManage = can(session?.role, Permission.STUDENT_MANAGE);
@@ -68,6 +71,11 @@ export function StudentActions({ student, onChange }: { student: StudentDetail; 
           <Power className="size-4" aria-hidden /> Activate
         </Button>
       )}
+      {canRemind && !archived && (
+        <Button variant="secondary" onClick={() => setReminding(true)}>
+          <BellRing className="size-4" aria-hidden /> Send reminder
+        </Button>
+      )}
       {canArchive && !archived && (
         <Button variant="ghost" className="text-danger" onClick={() => setConfirm('archive')}>
           <Archive className="size-4" aria-hidden /> Archive
@@ -79,6 +87,7 @@ export function StudentActions({ student, onChange }: { student: StudentDetail; 
         </Button>
       )}
 
+      <SendReminderDialog open={reminding} student={{ id: student.id, name }} onClose={() => setReminding(false)} />
       <ConfirmDialog
         open={confirm === 'deactivate'}
         title={`Deactivate ${name}?`}

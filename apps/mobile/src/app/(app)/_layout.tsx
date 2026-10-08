@@ -2,6 +2,8 @@ import type { ComponentProps } from 'react';
 import { Pressable } from 'react-native';
 import { router, Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { NotificationBell } from '@/components/notification-bell';
+import { NotificationsProvider } from '@/lib/notifications';
 import { StudentProfileProvider } from '@/lib/student-profile';
 import { colors } from '@/theme/tokens';
 
@@ -19,6 +21,7 @@ const TABS: { name: string; title: string; icon: IconName }[] = [
 export default function AppTabsLayout() {
   return (
     <StudentProfileProvider>
+    <NotificationsProvider>
     <Tabs
       screenOptions={{
         headerShadowVisible: false,
@@ -27,6 +30,7 @@ export default function AppTabsLayout() {
         tabBarActiveTintColor: colors.brand600,
         tabBarInactiveTintColor: colors.inkMuted,
         tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
+        headerRight: () => <NotificationBell />,
       }}
     >
       {TABS.map(({ name, title, icon }) => (
@@ -41,6 +45,8 @@ export default function AppTabsLayout() {
         { name: 'plans', title: 'Plan history' },
         { name: 'attendance', title: 'Meal history' },
         { name: 'receipt', title: 'Receipt' },
+        { name: 'notifications', title: 'Notifications' },
+        { name: 'notification-settings', title: 'Notification settings' },
       ].map(({ name, title }) => (
         <Tabs.Screen
           key={name}
@@ -57,6 +63,7 @@ export default function AppTabsLayout() {
         />
       ))}
     </Tabs>
+    </NotificationsProvider>
     </StudentProfileProvider>
   );
 }
