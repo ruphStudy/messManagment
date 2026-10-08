@@ -78,13 +78,7 @@ export class AttendanceService {
   }
 
   async list(messId: string, query: ListAttendanceQueryDto): Promise<Paginated<ReturnType<typeof toAttendanceRecord>>> {
-    const where: Prisma.MealAttendanceWhereInput = {
-      messId,
-      attendanceDate: fromDateString(query.date ?? businessToday()),
-      mealType: query.mealType,
-      status: query.status,
-      ...(query.search ? { student: { AND: studentSearchTerms(query.search) } } : {}),
-    };
+    const where = this.listWhere(messId, query);
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.mealAttendance.findMany({
         where,
@@ -96,6 +90,31 @@ export class AttendanceService {
       this.prisma.mealAttendance.count({ where }),
     ]);
     return new Paginated(rows.map(toAttendanceRecord), total, query);
+  }
+
+  /** One date (default today), or a from/to range when no date is given. */
+  private listWhere(messId: string, query: ListAttendanceQueryDto): Prisma.MealAttendanceWhereInput {
+    const range = !query.date && (query.from || query.to);
+    return {
+      messId,
+      attendanceDate: range
+        ? { ...(query.from ? { gte: fromDateString(query.from) } : {}), ...(query.to ? { lte: fromDateString(query.to) } : {}) }
+        : fromDateString(query.date ?? businessToday()),
+      mealType: query.mealType,
+      status: query.status,
+      ...(query.search ? { student: { AND: studentSearchTerms(query.search) } } : {}),
+    };
+  }
+
+  /** Served (never reversed) meals per meal type for the filtered set. */
+  async servedCounts(messId: string, query: ListAttendanceQueryDto): Promise<Record<MealType, number> & { total: number }> {
+    const groups = await this.prisma.mealAttendance.groupBy({
+      by: ['mealType'],
+      where: { ...this.listWhere(messId, query), status: AttendanceStatus.SERVED },
+      _count: { _all: true },
+    });
+    const counts = Object.fromEntries(MEAL_KEYS.map((k) => [k, groups.find((g) => g.mealType === k)?._count._all ?? 0])) as Record<MealType, number>;
+    return { ...counts, total: counts.breakfast + counts.lunch + counts.dinner };
   }
 
   /** Served meals per meal type for a date (reversed ones excluded). */

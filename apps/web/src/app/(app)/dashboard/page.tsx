@@ -1,293 +1,266 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, Circle } from 'lucide-react';
-import { addDays, businessToday, can, formatPaise, MEAL_KEYS, MEAL_LABELS, Permission, Role, startOfWeek, type AttendanceSummary, type ExpectedMeals, type MealPlan, type MenuDay, type ComplaintCounts, type ExpenseSummary, type PaymentDashboardSummary, type RatingSummary } from '@mess/shared';
-import { FinanceCard } from '@/components/expenses/finance-card';
-import { MenuStatusBadge } from '@/components/menu/menu-status-badge';
-import { mealSummary } from '@/lib/menu';
-import { api, apiEnvelope } from '@/lib/api';
+import { AlertTriangle, CheckCircle2, ChevronRight } from 'lucide-react';
+import {
+  can,
+  formatPaise,
+  MEAL_KEYS,
+  MEAL_LABELS,
+  Permission,
+  type DashboardOverview,
+  type ExpectedMeals,
+  type MenuStatusToday,
+  type Role,
+} from '@mess/shared';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/loader';
 import { PageHeader } from '@/components/ui/page-header';
+import { ErrorState } from '@/components/ui/states';
+import { api, errorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth/auth-context';
+import { longDate } from '@/lib/menu';
 
-interface SetupCounts {
-  students: number;
-  plans: number;
-  subscriptions: number;
-  publishedDays: number;
+const MENU_STATUS: Record<MenuStatusToday, { label: string; tone: 'success' | 'warning' | 'danger' }> = {
+  PUBLISHED: { label: 'Published', tone: 'success' },
+  DRAFT: { label: 'Draft — not visible to students', tone: 'warning' },
+  NOT_CREATED: { label: 'Not created', tone: 'danger' },
+};
+
+const linkClass = 'inline-flex min-h-11 items-center rounded-control border border-border px-4 text-sm font-semibold hover:bg-canvas';
+const primaryLinkClass = 'inline-flex min-h-11 items-center rounded-control bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700';
+
+function quickActions(role: Role | undefined) {
+  return [
+    { label: 'Scan QR', href: '/attendance/scan', permission: Permission.ATTENDANCE_MARK, primary: true },
+    { label: 'Attendance', href: '/attendance', permission: Permission.ATTENDANCE_VIEW },
+    { label: 'Add student', href: '/students/new', permission: Permission.STUDENT_MANAGE },
+    { label: 'Record payment', href: '/payments?record=1', permission: Permission.PAYMENT_RECORD },
+    { label: 'Add expense', href: '/expenses?add=1', permission: Permission.EXPENSE_MANAGE },
+    { label: "Edit today's menu", href: '/menu', permission: Permission.MENU_MANAGE },
+    { label: 'View dues', href: '/payments/dues', permission: Permission.FINANCE_VIEW },
+    { label: 'View complaints', href: '/complaints?status=OPEN', permission: Permission.COMPLAINT_VIEW },
+  ].filter((a) => can(role, a.permission));
 }
 
-/** Small counts for the setup checklist (one row per list is enough to read the total). */
-function useSetupCounts() {
-  const [counts, setCounts] = useState<SetupCounts | null>(null);
-  useEffect(() => {
-    const total = (path: string) => apiEnvelope<unknown[]>(path).then((res) => res.meta?.total ?? 0);
-    const week = startOfWeek(businessToday());
-    Promise.all([
-      total('/students?pageSize=1'),
-      api<MealPlan[]>('/meal-plans?status=ACTIVE'),
-      total('/subscriptions?pageSize=1'),
-      api<MenuDay[]>(`/menus?from=${week}&to=${addDays(week, 6)}`),
-    ])
-      .then(([students, plans, subscriptions, menuDays]) =>
-        setCounts({ students, plans: plans.length, subscriptions, publishedDays: menuDays.filter((d) => d.menu?.isPublished).length }),
-      )
-      .catch(() => setCounts(null));
-  }, []);
-  return counts;
-}
-
-function TodayAttendanceCard({ canScan }: { canScan: boolean }) {
-  const [summary, setSummary] = useState<AttendanceSummary | null>(null);
-  useEffect(() => {
-    api<AttendanceSummary>('/attendance/summary').then(setSummary).catch(() => setSummary(null));
-  }, []);
+function Stat({ label, value, note, tone }: { label: string; value: ReactNode; note?: string; tone?: 'danger' | 'success' }) {
   return (
-    <Card className="md:col-span-5">
-      <CardHeader
-        title="Meals served today"
-        action={canScan && <Link href="/attendance/scan" className="inline-flex min-h-11 items-center rounded-control bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Scan QR</Link>}
-      />
+    <div>
+      <dt className="text-sm text-ink-muted">{label}</dt>
+      <dd className={tone === 'danger' ? 'text-2xl font-bold text-danger' : tone === 'success' ? 'text-2xl font-bold text-success' : 'text-2xl font-bold'}>{value}</dd>
+      {note && <dd className="text-xs text-ink-muted">{note}</dd>}
+    </div>
+  );
+}
+
+function MealsCard({ title, description, counts, today, action }: { title: string; description: string; counts: ExpectedMeals; today: boolean; action: ReactNode }) {
+  return (
+    <Card>
+      <CardHeader title={title} description={description} />
       <dl className="grid grid-cols-3 gap-3">
-        {MEAL_KEYS.map((key) => (
-          <div key={key}>
-            <dt className="text-sm text-ink-muted">{MEAL_LABELS[key]}</dt>
-            <dd className="text-2xl font-bold">{summary ? summary[key] : '–'}</dd>
-          </div>
-        ))}
-      </dl>
-      <Link href="/attendance" className="mt-3 inline-flex min-h-11 items-center font-semibold text-brand-700 hover:underline">View attendance →</Link>
-    </Card>
-  );
-}
-
-function PaymentsCard({ canRecord }: { canRecord: boolean }) {
-  const [summary, setSummary] = useState<PaymentDashboardSummary | null>(null);
-  useEffect(() => {
-    api<PaymentDashboardSummary>('/payments/summary').then(setSummary).catch(() => setSummary(null));
-  }, []);
-  const stats: [string, string][] = summary
-    ? [
-        ['Collected today', formatPaise(summary.collectedTodayPaise)],
-        ['This month', formatPaise(summary.collectedThisMonthPaise)],
-        ['Pending dues', formatPaise(summary.pendingDuesPaise)],
-        ['Students owing', String(summary.studentsWithDues)],
-      ]
-    : [['Collected today', '–'], ['This month', '–'], ['Pending dues', '–'], ['Students owing', '–']];
-  return (
-    <Card className="md:col-span-5">
-      <CardHeader title="Payments" />
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {stats.map(([label, value]) => (
-          <div key={label}>
-            <dt className="text-sm text-ink-muted">{label}</dt>
-            <dd className="text-xl font-bold">{value}</dd>
-          </div>
-        ))}
-      </dl>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {canRecord && <Link href="/payments?record=1" className="inline-flex min-h-11 items-center rounded-control bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Record payment</Link>}
-        <Link href="/payments/dues" className="inline-flex min-h-11 items-center rounded-control border border-border px-4 text-sm font-semibold hover:bg-canvas">View dues / Send reminders</Link>
-      </div>
-    </Card>
-  );
-}
-
-function ExpensesCard({ canAdd }: { canAdd: boolean }) {
-  const [today, setToday] = useState<ExpenseSummary | null>(null);
-  const [month, setMonth] = useState<ExpenseSummary | null>(null);
-  useEffect(() => {
-    const date = businessToday();
-    api<ExpenseSummary>(`/expenses/summary?from=${date}&to=${date}`).then(setToday).catch(() => setToday(null));
-    api<ExpenseSummary>(`/expenses/monthly/summary?month=${date.slice(0, 7)}`).then(setMonth).catch(() => setMonth(null));
-  }, []);
-  return (
-    <Card className="md:col-span-2">
-      <CardHeader title="Expenses" />
-      <dl className="grid grid-cols-2 gap-3">
-        <div><dt className="text-sm text-ink-muted">Today</dt><dd className="text-xl font-bold">{today ? formatPaise(today.totalPaise) : '–'}</dd></div>
-        <div><dt className="text-sm text-ink-muted">This month</dt><dd className="text-xl font-bold">{month ? formatPaise(month.totalPaise) : '–'}</dd></div>
-      </dl>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {canAdd && <Link href="/expenses?add=1" className="inline-flex min-h-11 items-center rounded-control bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Add expense</Link>}
-        <Link href="/expenses" className="inline-flex min-h-11 items-center rounded-control border border-border px-4 text-sm font-semibold hover:bg-canvas">View expenses</Link>
-      </div>
-    </Card>
-  );
-}
-
-function FeedbackCard({ showRatings }: { showRatings: boolean }) {
-  const [ratings, setRatings] = useState<RatingSummary | null>(null);
-  const [counts, setCounts] = useState<ComplaintCounts | null>(null);
-  useEffect(() => {
-    const today = businessToday();
-    if (showRatings) api<RatingSummary>(`/feedback/summary?from=${today.slice(0, 7)}-01&to=${today}`).then(setRatings).catch(() => setRatings(null));
-    api<ComplaintCounts>('/complaints/counts').then(setCounts).catch(() => setCounts(null));
-  }, [showRatings]);
-  const avg = ratings?.averages.overall;
-  return (
-    <Card className="md:col-span-5">
-      <CardHeader title="Feedback & complaints" />
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {showRatings && (
-          <>
-            <div><dt className="text-sm text-ink-muted">Avg rating (month)</dt><dd className="text-xl font-bold">{ratings ? (avg == null ? '—' : `${avg.toFixed(1)}★`) : '–'}</dd></div>
-            <div><dt className="text-sm text-ink-muted">Ratings (month)</dt><dd className="text-xl font-bold">{ratings ? ratings.mealCount + ratings.generalCount : '–'}</dd></div>
-          </>
-        )}
-        <div><dt className="text-sm text-ink-muted">Open complaints</dt><dd className="text-xl font-bold text-danger">{counts ? counts.OPEN : '–'}</dd></div>
-        <div><dt className="text-sm text-ink-muted">In progress</dt><dd className="text-xl font-bold">{counts ? counts.IN_PROGRESS : '–'}</dd></div>
-      </dl>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {showRatings && <Link href="/feedback" className="inline-flex min-h-11 items-center rounded-control border border-border px-4 text-sm font-semibold hover:bg-canvas">View feedback</Link>}
-        <Link href="/complaints?status=OPEN" className="inline-flex min-h-11 items-center rounded-control border border-border px-4 text-sm font-semibold hover:bg-canvas">View complaints</Link>
-      </div>
-    </Card>
-  );
-}
-
-/** Deterministic planning numbers: plans valid tomorrow minus pauses. */
-function TomorrowMealsCard() {
-  const [counts, setCounts] = useState<ExpectedMeals | null>(null);
-  const [failed, setFailed] = useState(false);
-  useEffect(() => {
-    api<ExpectedMeals>(`/attendance/expected?date=${addDays(businessToday(), 1)}`).then(setCounts).catch(() => setFailed(true));
-  }, []);
-  return (
-    <Card className="md:col-span-5">
-      <CardHeader title="Tomorrow's meals" description="Students on a plan, minus those who paused" />
-      {failed ? (
-        <p className="text-sm text-ink-muted">Couldn&apos;t load tomorrow&apos;s counts.</p>
-      ) : (
-        <dl className="grid grid-cols-3 gap-3">
-          {MEAL_KEYS.map((key) => (
+        {MEAL_KEYS.map((key) => {
+          const m = counts.meals[key];
+          return (
             <div key={key}>
               <dt className="text-sm text-ink-muted">{MEAL_LABELS[key]}</dt>
-              <dd className="text-2xl font-bold">{counts ? counts.meals[key].expected : '–'}</dd>
-              <dd className="text-xs text-ink-muted">{counts ? `${counts.meals[key].paused} paused` : ' '}</dd>
+              <dd className="text-2xl font-bold">{m.expected}</dd>
+              <dd className="text-xs text-ink-muted">expected · {m.paused} paused</dd>
+              {today && <dd className="text-xs text-ink-muted">{m.served} served · {m.remaining} left</dd>}
             </div>
-          ))}
-        </dl>
-      )}
-      <Link href={`/pauses?from=${addDays(businessToday(), 1)}`} className="mt-3 inline-flex min-h-11 items-center font-semibold text-brand-700 hover:underline">See who paused →</Link>
+          );
+        })}
+      </dl>
+      <div className="mt-3 flex flex-wrap gap-2">{action}</div>
     </Card>
   );
 }
 
-function TodayMenuCard() {
-  const [day, setDay] = useState<MenuDay | null>(null);
-  const [failed, setFailed] = useState(false);
-  useEffect(() => {
-    api<MenuDay>(`/menus/${businessToday()}`).then(setDay).catch(() => setFailed(true));
-  }, []);
-
+function DashboardSkeleton() {
   return (
-    <Card className="md:col-span-5">
-      <CardHeader title="Today's menu" action={day && <MenuStatusBadge menu={day.menu} />} />
-      {failed ? (
-        <p className="text-sm text-ink-muted">Couldn&apos;t load today&apos;s menu.</p>
-      ) : !day ? (
-        <div className="h-12 animate-pulse rounded bg-slate-100" />
-      ) : day.menu ? (
-        <dl className="grid gap-2 text-sm sm:grid-cols-3">
-          {MEAL_KEYS.map((key) => (
-            <div key={key}>
-              <dt className="text-ink-muted">{MEAL_LABELS[key]}</dt>
-              <dd className="line-clamp-2 font-medium">{mealSummary(day.menu![key])}</dd>
-            </div>
-          ))}
-        </dl>
-      ) : (
-        <p className="text-sm text-ink-muted">No menu created for today yet.</p>
+    <div className="grid gap-4 md:grid-cols-2" aria-busy aria-label="Loading dashboard">
+      {Array.from({ length: 4 }, (_, i) => (
+        <Card key={i} className="flex flex-col gap-3">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-10" />
+          <Skeleton className="h-6 w-3/4" />
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function Overview({ data, role }: { data: DashboardOverview; role: Role | undefined }) {
+  const { meals, menu, money, students, subscriptions, complaints, feedback, actionItems } = data;
+  const status = MENU_STATUS[menu.status];
+  return (
+    <div className="flex flex-col gap-6">
+      <section aria-labelledby="today-h">
+        <h2 id="today-h" className="mb-3 text-lg font-semibold">Today · {longDate(data.dates.today)}</h2>
+        <div className="grid gap-4 md:grid-cols-2">
+          <MealsCard
+            title="Meals today"
+            description="Students on a plan, minus pauses"
+            counts={meals.today}
+            today
+            action={can(role, Permission.ATTENDANCE_VIEW) && <Link href="/attendance" className={linkClass}>View attendance</Link>}
+          />
+          <div className="grid gap-4">
+            <Card>
+              <CardHeader title="Today's menu" action={<Badge tone={status.tone}>{status.label}</Badge>} />
+              <Link href="/menu" className="inline-flex min-h-11 items-center font-semibold text-brand-700 hover:underline">
+                {menu.status === 'NOT_CREATED' ? 'Create menu' : can(role, Permission.MENU_MANAGE) ? 'Edit menu' : 'View menu'} →
+              </Link>
+            </Card>
+            {students && (
+              <Card>
+                <dl className="grid grid-cols-3 gap-3">
+                  <Stat label="Active students" value={students.active} />
+                  <Stat label="Inactive" value={students.inactive} />
+                  <Stat label="Joined this month" value={students.joinedThisMonth} />
+                </dl>
+              </Card>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="tomorrow-h">
+        <h2 id="tomorrow-h" className="mb-3 text-lg font-semibold">Tomorrow · {longDate(data.dates.tomorrow)}</h2>
+        <MealsCard
+          title="Tomorrow's meals"
+          description="Plan the cooking: valid plans minus pauses"
+          counts={meals.tomorrow}
+          today={false}
+          action={can(role, Permission.PAUSE_VIEW) && <Link href={`/pauses?from=${data.dates.tomorrow}`} className={linkClass}>See who paused</Link>}
+        />
+      </section>
+
+      {money && (
+        <section aria-labelledby="money-h">
+          <h2 id="money-h" className="mb-3 text-lg font-semibold">Money</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader title="Collected" />
+              <dl className="grid grid-cols-2 gap-3">
+                <Stat label="Today" value={formatPaise(money.collectedTodayPaise)} />
+                <Stat label="This month" value={formatPaise(money.collectedThisMonthPaise)} />
+                <Stat label="Pending dues" value={formatPaise(money.pendingDuesPaise)} tone={money.pendingDuesPaise > 0 ? 'danger' : undefined} />
+                <Stat label="Students owing" value={money.studentsWithDues} />
+              </dl>
+            </Card>
+            <Card>
+              <CardHeader title="Spent" />
+              <dl className="grid grid-cols-2 gap-3">
+                <Stat label="Today" value={formatPaise(money.expensesTodayPaise)} />
+                <Stat label="This month" value={formatPaise(money.expensesThisMonthPaise)} />
+                <div className="col-span-2">
+                  <Stat
+                    label="Estimated operating balance (this month)"
+                    value={formatPaise(money.balance.netPaise)}
+                    tone={money.balance.netPaise < 0 ? 'danger' : 'success'}
+                    note="Collected minus expenses. Not accounting profit; unpaid dues are not counted."
+                  />
+                </div>
+              </dl>
+            </Card>
+          </div>
+        </section>
       )}
-      <Link href="/menu" className="mt-4 inline-flex min-h-11 items-center font-semibold text-brand-700 hover:underline">
-        {day?.menu ? 'Edit menu' : 'Create menu'} →
-      </Link>
-    </Card>
+
+      {(subscriptions || complaints || feedback || actionItems.length > 0) && (
+        <section aria-labelledby="attention-h">
+          <h2 id="attention-h" className="mb-3 text-lg font-semibold">Needs attention</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader title="To do" />
+              {actionItems.length === 0 ? (
+                <p className="flex min-h-11 items-center gap-2 text-sm text-ink-muted"><CheckCircle2 className="size-5 text-success" aria-hidden /> Nothing needs attention right now.</p>
+              ) : (
+                <ul className="flex flex-col divide-y divide-border">
+                  {actionItems.map((item) => (
+                    <li key={item.key}>
+                      <Link href={item.href} className="flex min-h-12 items-center gap-3 hover:bg-canvas">
+                        <AlertTriangle className="size-5 shrink-0 text-warning" aria-hidden />
+                        <span className="flex-1">{item.label}</span>
+                        {item.key !== 'MENU_NOT_PUBLISHED' && <Badge tone="warning">{item.count}</Badge>}
+                        <ChevronRight className="size-4 text-ink-muted" aria-hidden />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+            <div className="grid gap-4">
+              {subscriptions && (
+                <Card>
+                  <CardHeader title="Plans" />
+                  <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <Stat label="Active" value={subscriptions.active} />
+                    <Stat label="Starting soon" value={subscriptions.upcoming} />
+                    <Stat label="Ending in 7 days" value={subscriptions.expiringSoon} tone={subscriptions.expiringSoon > 0 ? 'danger' : undefined} />
+                    <Stat label="Ended, not renewed" value={subscriptions.endedWithoutRenewal} note="last 7 days" />
+                  </dl>
+                </Card>
+              )}
+              {(complaints || feedback) && (
+                <Card>
+                  <CardHeader title="Feedback & complaints" />
+                  <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {feedback && (
+                      <Stat label="Avg rating" value={feedback.monthAverage == null ? '—' : `${feedback.monthAverage.toFixed(1)}★`} note={`${feedback.monthCount} this month`} />
+                    )}
+                    {complaints && (
+                      <>
+                        <Stat label="Open complaints" value={complaints.OPEN} tone={complaints.OPEN > 0 ? 'danger' : undefined} />
+                        <Stat label="In progress" value={complaints.IN_PROGRESS} />
+                        <Stat label="Resolved" value={complaints.resolvedThisMonth} note="this month" />
+                      </>
+                    )}
+                  </dl>
+                </Card>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+    </div>
   );
 }
 
 export default function DashboardPage() {
   const { session } = useAuth();
-  const counts = useSetupCounts();
-  if (!session?.membership) return null;
+  const [data, setData] = useState<DashboardOverview | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
-  const CHECKLIST = [
-    { label: 'Create your account', done: true },
-    { label: 'Set up your mess profile', done: true, href: '/settings' },
-    { label: 'Add your students', done: !!counts?.students, href: '/students', note: counts?.students ? `${counts.students} added` : undefined },
-    { label: 'Create meal plans', done: !!counts?.plans, href: '/meal-plans', note: counts?.plans ? `${counts.plans} active` : undefined },
-    {
-      label: 'Assign plans to students',
-      done: !!counts?.subscriptions,
-      href: '/subscriptions',
-      note: counts?.subscriptions ? `${counts.subscriptions} assigned` : undefined,
-    },
-    {
-      label: 'Publish this week’s menu',
-      done: counts?.publishedDays === 7,
-      href: '/menu/week',
-      note: counts ? `${counts.publishedDays}/7 days` : undefined,
-    },
-  ];
-  const isOwner = session.role === Role.MESS_OWNER;
+  useEffect(() => {
+    setError(null);
+    setData(null);
+    api<DashboardOverview>('/dashboard').then(setData).catch((e: unknown) => setError(errorMessage(e)));
+  }, [attempt]);
+
+  if (!session?.membership) return null;
+  const actions = quickActions(session.role);
 
   return (
     <>
       <PageHeader title={`Welcome, ${session.user.firstName}!`} description={session.membership.mess.name} />
-
-      <div className="grid gap-4 md:grid-cols-5">
-        {can(session.role, Permission.PAYMENT_VIEW) && <PaymentsCard canRecord={can(session.role, Permission.PAYMENT_RECORD)} />}
-        {can(session.role, Permission.EXPENSE_VIEW) && <ExpensesCard canAdd={can(session.role, Permission.EXPENSE_MANAGE)} />}
-        {can(session.role, Permission.FINANCE_VIEW) && <FinanceCard month={businessToday().slice(0, 7)} className="md:col-span-3" title="This month: collected vs spent" />}
-        {can(session.role, Permission.COMPLAINT_VIEW) && <FeedbackCard showRatings={can(session.role, Permission.FEEDBACK_VIEW)} />}
-        <TomorrowMealsCard />
-        <TodayAttendanceCard canScan={can(session.role, Permission.ATTENDANCE_MARK)} />
-        <TodayMenuCard />
-        <Card className="md:col-span-3">
-          <CardHeader
-            title="Getting started"
-            description={isOwner ? 'Your mess is set up. More tools are on the way.' : 'Your mess workspace is ready.'}
-          />
-          <ul className="flex flex-col gap-1">
-            {CHECKLIST.map(({ label, done, href, note }) => (
-              <li key={label} className="flex min-h-11 items-center gap-3">
-                {done ? (
-                  <CheckCircle2 className="size-5 shrink-0 text-success" aria-label="Done" />
-                ) : (
-                  <Circle className="size-5 shrink-0 text-slate-300" aria-label="Not done" />
-                )}
-                <span className={done ? 'text-ink' : 'text-ink-muted'}>
-                  {href ? (
-                    <Link href={href} className="hover:underline">
-                      {label}
-                    </Link>
-                  ) : (
-                    label
-                  )}
-                </span>
-                {note && <span className="ml-auto text-xs text-ink-muted">{note}</span>}
-              </li>
-            ))}
-          </ul>
-        </Card>
-
-        <Card className="md:col-span-2">
-          <CardHeader title="Setup status" />
-          <p className="text-3xl font-bold text-brand-700">
-            {CHECKLIST.filter((c) => c.done).length}/{CHECKLIST.length}
-          </p>
-          <p className="mt-1 text-sm text-ink-muted">steps completed</p>
-          <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100">
-            <div
-              className="h-full rounded-full bg-brand-600"
-              style={{ width: `${(CHECKLIST.filter((c) => c.done).length / CHECKLIST.length) * 100}%` }}
-            />
-          </div>
-        </Card>
-      </div>
+      {actions.length > 0 && (
+        <nav aria-label="Quick actions" className="mb-6 flex flex-wrap gap-2">
+          {actions.map((a) => (
+            <Link key={a.href} href={a.href} className={a.primary ? primaryLinkClass : linkClass}>{a.label}</Link>
+          ))}
+        </nav>
+      )}
+      {error ? (
+        <ErrorState title="Couldn't load the dashboard" description={error} onRetry={() => setAttempt((n) => n + 1)} />
+      ) : !data ? (
+        <DashboardSkeleton />
+      ) : (
+        <Overview data={data} role={session.role} />
+      )}
     </>
   );
 }

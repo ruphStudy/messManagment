@@ -9,7 +9,9 @@ export class ResponseInterceptor implements NestInterceptor {
   intercept(_context: ExecutionContext, next: CallHandler) {
     return next.handle().pipe(
       map((value): ApiSuccess<unknown> => {
-        if (value instanceof Paginated) return { data: value.items, meta: value.meta };
+        if (value instanceof Paginated) {
+          return { data: value.items, meta: value.meta, ...(value.summary !== undefined ? { summary: value.summary } : {}) };
+        }
         return { data: value ?? null };
       }),
     );

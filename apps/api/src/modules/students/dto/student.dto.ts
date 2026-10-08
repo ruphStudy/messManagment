@@ -96,6 +96,14 @@ export class ListStudentsQueryDto extends PaginationQueryDto implements StudentL
   status?: StudentStatus;
 
   @IsOptional()
+  @IsDateOnly()
+  joinedFrom?: string;
+
+  @IsOptional()
+  @IsDateOnly()
+  joinedTo?: string;
+
+  @IsOptional()
   @IsIn(STUDENT_SORT_FIELDS)
   sortBy: StudentSortField = 'createdAt';
 

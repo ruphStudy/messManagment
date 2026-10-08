@@ -8,5 +8,6 @@ import { ComplaintsService } from './complaints.service';
   imports: [StudentsModule, FilesModule],
   controllers: [ComplaintsController, StudentComplaintsController],
   providers: [ComplaintsService],
+  exports: [ComplaintsService],
 })
 export class ComplaintsModule {}

@@ -26,6 +26,9 @@ export class PaginationQueryDto {
 export class Paginated<T> {
   readonly meta: PaginationMeta;
 
+  /** Optional totals over the whole filtered set (reports). */
+  summary?: unknown;
+
   constructor(
     readonly items: T[],
     total: number,

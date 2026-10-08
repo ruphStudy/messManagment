@@ -71,6 +71,8 @@ export const ErrorCode = {
   COMPLAINT_STATUS_INVALID: 'COMPLAINT_STATUS_INVALID',
   ATTACHMENT_INVALID: 'ATTACHMENT_INVALID',
   FILE_NOT_FOUND: 'FILE_NOT_FOUND',
+  REPORT_RANGE_TOO_LARGE: 'REPORT_RANGE_TOO_LARGE',
+  EXPORT_TOO_LARGE: 'EXPORT_TOO_LARGE',
   RATE_LIMITED: 'RATE_LIMITED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;
@@ -79,6 +81,8 @@ export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 export interface ApiSuccess<T> {
   data: T;
   meta?: PaginationMeta;
+  /** Report totals for the whole filtered set (not just this page). */
+  summary?: unknown;
 }
 
 export interface ApiErrorBody {

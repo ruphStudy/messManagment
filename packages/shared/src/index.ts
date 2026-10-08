@@ -12,3 +12,4 @@ export * from './payments';
 export * from './expenses';
 export * from './notifications';
 export * from './feedback';
+export * from './reports';

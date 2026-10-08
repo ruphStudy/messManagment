@@ -42,6 +42,10 @@ export class StudentsService {
     const where: Prisma.MessStudentWhereInput = {
       messId,
       status: query.status ?? NOT_ARCHIVED,
+      joiningDate: {
+        ...(query.joinedFrom ? { gte: fromDateString(query.joinedFrom) } : {}),
+        ...(query.joinedTo ? { lte: fromDateString(query.joinedTo) } : {}),
+      },
       AND: studentSearchTerms(query.search, ['firstName', 'lastName', 'email', 'collegeName', 'hostelOrPg']),
     };
     const [rows, total] = await this.prisma.$transaction([

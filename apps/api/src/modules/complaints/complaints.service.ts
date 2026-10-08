@@ -150,8 +150,8 @@ export class ComplaintsService {
 
   // ── Mess team ──
 
-  async list(messId: string, query: ListComplaintsQueryDto) {
-    const where: Prisma.ComplaintWhereInput = {
+  private listWhere(messId: string, query: Omit<ListComplaintsQueryDto, 'skip' | 'page' | 'pageSize'>): Prisma.ComplaintWhereInput {
+    return {
       messId,
       status: query.status,
       category: query.category,
@@ -162,6 +162,10 @@ export class ComplaintsService {
       },
       ...(query.search ? { student: { AND: studentSearchTerms(query.search) } } : {}),
     };
+  }
+
+  async list(messId: string, query: ListComplaintsQueryDto) {
+    const where = this.listWhere(messId, query);
     const [rows, total] = await this.prisma.$transaction([
       // Open first, then in progress, then resolved; newest first within each.
       this.prisma.complaint.findMany({ where, include: listInclude, orderBy: [{ status: 'asc' }, { createdAt: 'desc' }], skip: query.skip, take: query.pageSize }),
@@ -170,8 +174,9 @@ export class ComplaintsService {
     return new Paginated(rows.map((r): ComplaintListItem => ({ ...toSummary(r), student: r.student })), total, query);
   }
 
-  async counts(messId: string): Promise<ComplaintCounts> {
-    const groups = await this.prisma.complaint.groupBy({ by: ['status'], where: { messId }, _count: { _all: true } });
+  /** Per-status counts; with filters (reports) the status filter itself is ignored so all three show. */
+  async counts(messId: string, filters: Partial<ListComplaintsQueryDto> = {}): Promise<ComplaintCounts> {
+    const groups = await this.prisma.complaint.groupBy({ by: ['status'], where: this.listWhere(messId, { ...filters, status: undefined }), _count: { _all: true } });
     const count = (s: ComplaintStatus) => groups.find((g) => g.status === s)?._count._all ?? 0;
     return { OPEN: count(ComplaintStatus.OPEN), IN_PROGRESS: count(ComplaintStatus.IN_PROGRESS), RESOLVED: count(ComplaintStatus.RESOLVED) };
   }

@@ -131,3 +131,26 @@ export async function apiObjectUrl(path: string): Promise<string> {
   if (!res.ok) throw new ApiError(res.status, ErrorCode.FILE_NOT_FOUND, 'Could not load the file');
   return URL.createObjectURL(await res.blob());
 }
+
+/** Authorized file download (e.g. a CSV export): saves it under the server's filename. API errors are thrown as ApiError. */
+export async function apiDownload(path: string, fallbackName: string): Promise<void> {
+  const get = () => fetch(`${API_PREFIX}${path}`, { headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {}, credentials: 'same-origin' });
+  let res: Response;
+  try {
+    res = await get();
+    if (res.status === 401 && (await refreshSession())) res = await get();
+  } catch {
+    throw new ApiError(0, NETWORK_ERROR, 'Cannot reach the server. Check your internet connection and try again.');
+  }
+  if (!res.ok) {
+    const error = ((await res.json().catch(() => null)) as ApiErrorBody | null)?.error;
+    throw new ApiError(res.status, error?.code ?? ErrorCode.INTERNAL_ERROR, error?.message ?? 'Download failed. Please try again.', error?.fields);
+  }
+  const name = /filename="?([^";]+)"?/.exec(res.headers.get('Content-Disposition') ?? '')?.[1] ?? fallbackName;
+  const url = URL.createObjectURL(await res.blob());
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

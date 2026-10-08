@@ -9,5 +9,6 @@ import { MealQrService } from './meal-qr.service';
   imports: [StudentsModule, SubscriptionsModule],
   controllers: [AttendanceController, StudentAttendanceController],
   providers: [AttendanceService, MealQrService],
+  exports: [AttendanceService],
 })
 export class AttendanceModule {}

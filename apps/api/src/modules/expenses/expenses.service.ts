@@ -74,8 +74,8 @@ export class ExpensesService {
     return toExpense(row);
   }
 
-  async list(messId: string, query: ListExpensesQueryDto) {
-    const where: Prisma.ExpenseWhereInput = {
+  private listWhere(messId: string, query: ListExpensesQueryDto): Prisma.ExpenseWhereInput {
+    return {
       messId,
       categoryId: query.categoryId,
       status: query.status,
@@ -83,6 +83,20 @@ export class ExpensesService {
       expenseDate: { ...(query.from ? { gte: fromDateString(query.from) } : {}), ...(query.to ? { lte: fromDateString(query.to) } : {}) },
       ...(query.search ? { AND: this.searchTerms(query.search) } : {}),
     };
+  }
+
+  /** Spent in the filtered set: RECORDED only (reversed rows never count). */
+  async recordedTotal(messId: string, query: ListExpensesQueryDto) {
+    const where = this.listWhere(messId, query);
+    const [sum, reversed] = await Promise.all([
+      this.prisma.expense.aggregate({ where: { ...where, status: ExpenseStatus.RECORDED }, _sum: { amountPaise: true }, _count: { _all: true } }),
+      this.prisma.expense.count({ where: { ...where, status: ExpenseStatus.REVERSED } }),
+    ]);
+    return { totalPaise: sum._sum.amountPaise ?? 0, recordedCount: sum._count._all, reversedCount: reversed };
+  }
+
+  async list(messId: string, query: ListExpensesQueryDto) {
+    const where = this.listWhere(messId, query);
     const order = query.sortOrder ?? 'desc';
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.expense.findMany({

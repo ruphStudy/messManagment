@@ -45,6 +45,15 @@ export class ListAttendanceQueryDto extends PaginationQueryDto implements Attend
   @IsDateOnly()
   date?: string;
 
+  /** Range (reports). Ignored when `date` is given. */
+  @IsOptional()
+  @IsDateOnly()
+  from?: string;
+
+  @IsOptional()
+  @IsDateOnly()
+  to?: string;
+
   @IsOptional()
   @IsMealType()
   mealType?: MealType;

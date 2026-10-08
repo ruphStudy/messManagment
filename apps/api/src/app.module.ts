@@ -24,6 +24,8 @@ import { RemindersModule } from './modules/reminders/reminders.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { ComplaintsModule } from './modules/complaints/complaints.module';
 import { FilesModule } from './modules/files/files.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { ReportsModule } from './modules/reports/reports.module';
 
 @Module({
   imports: [
@@ -46,6 +48,8 @@ import { FilesModule } from './modules/files/files.module';
     FilesModule,
     FeedbackModule,
     ComplaintsModule,
+    DashboardModule,
+    ReportsModule,
   ],
   controllers: [HealthController],
   providers: [

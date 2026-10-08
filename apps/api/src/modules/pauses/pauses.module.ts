@@ -8,5 +8,6 @@ import { PausesService } from './pauses.service';
   imports: [StudentsModule],
   controllers: [PausesController, ExpectedMealsController, StudentPausesController],
   providers: [PausesService, MealCountsService],
+  exports: [PausesService, MealCountsService],
 })
 export class PausesModule {}

@@ -7,5 +7,6 @@ import { MenusService } from './menus.service';
   imports: [StudentsModule],
   controllers: [MenusController, StudentMenuController],
   providers: [MenusService],
+  exports: [MenusService],
 })
 export class MenusModule {}

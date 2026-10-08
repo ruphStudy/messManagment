@@ -201,15 +201,7 @@ export class PausesService {
   /** Mess team list. Without dates it shows today onwards. */
   async list(messId: string, query: ListPausesQueryDto) {
     const today = businessToday();
-    const from = query.from ?? (query.to ? undefined : today);
-    const where: Prisma.MealPauseWhereInput = {
-      messId,
-      studentId: query.studentId,
-      mealType: query.mealType,
-      status: query.status,
-      pauseDate: { ...(from ? { gte: fromDateString(from) } : {}), ...(query.to ? { lte: fromDateString(query.to) } : {}) },
-      ...(query.search ? { student: { AND: studentSearchTerms(query.search) } } : {}),
-    };
+    const where = this.listWhere(messId, query);
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.mealPause.findMany({
         where,
@@ -221,6 +213,27 @@ export class PausesService {
       this.prisma.mealPause.count({ where }),
     ]);
     return new Paginated(rows.map((r) => toPauseRecord(r, today)), total, query);
+  }
+
+  private listWhere(messId: string, query: ListPausesQueryDto): Prisma.MealPauseWhereInput {
+    const from = query.from ?? (query.to ? undefined : businessToday());
+    return {
+      messId,
+      studentId: query.studentId,
+      mealType: query.mealType,
+      status: query.status,
+      pauseDate: { ...(from ? { gte: fromDateString(from) } : {}), ...(query.to ? { lte: fromDateString(query.to) } : {}) },
+      ...(query.search ? { student: { AND: studentSearchTerms(query.search) } } : {}),
+    };
+  }
+
+  /** Active vs cancelled pauses per meal for the filtered set. */
+  async listSummary(messId: string, query: ListPausesQueryDto) {
+    const groups = await this.prisma.mealPause.groupBy({ by: ['mealType', 'status'], where: this.listWhere(messId, query), _count: { _all: true } });
+    const count = (meal: MealType, status: PauseStatus) => groups.find((g) => g.mealType === meal && g.status === status)?._count._all ?? 0;
+    const active = Object.fromEntries(MEAL_KEYS.map((m) => [m, count(m, PauseStatus.ACTIVE)])) as Record<MealType, number>;
+    const cancelled = MEAL_KEYS.reduce((sum, m) => sum + count(m, PauseStatus.CANCELLED), 0);
+    return { active, activeTotal: active.breakfast + active.lunch + active.dinner, cancelled };
   }
 
   /** Active paused meals per day (one grouped query). */

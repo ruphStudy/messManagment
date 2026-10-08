@@ -75,6 +75,10 @@ export const Permission = {
   COMPLAINT_VIEW: 'complaint:view',
   /** Change complaint status and reply (owner/manager). */
   COMPLAINT_MANAGE: 'complaint:manage',
+  /** Reports section (each report also has its own permission). */
+  REPORTS_VIEW: 'reports:view',
+  /** Business parts of the dashboard: students, subscriptions, feedback, complaints, action items. */
+  DASHBOARD_BUSINESS_VIEW: 'dashboard:business',
   STUDENT_SELF: 'student:self',
 } as const;
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -112,6 +116,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.FEEDBACK_VIEW,
     Permission.COMPLAINT_VIEW,
     Permission.COMPLAINT_MANAGE,
+    Permission.REPORTS_VIEW,
+    Permission.DASHBOARD_BUSINESS_VIEW,
   ],
   MESS_MANAGER: [
     Permission.MESS_VIEW,
@@ -140,6 +146,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.FEEDBACK_VIEW,
     Permission.COMPLAINT_VIEW,
     Permission.COMPLAINT_MANAGE,
+    Permission.REPORTS_VIEW,
+    Permission.DASHBOARD_BUSINESS_VIEW,
   ],
   MESS_STAFF: [
     Permission.MESS_VIEW,
@@ -152,6 +160,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.PAUSE_VIEW,
     Permission.PAYMENT_VIEW,
     Permission.COMPLAINT_VIEW,
+    Permission.REPORTS_VIEW,
   ],
   STUDENT: [Permission.STUDENT_SELF],
 };

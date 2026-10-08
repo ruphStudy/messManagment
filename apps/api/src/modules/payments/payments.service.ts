@@ -149,8 +149,8 @@ export class PaymentsService {
     return this.getRecord(messId, id);
   }
 
-  async list(messId: string, query: ListPaymentsQueryDto) {
-    const where: Prisma.PaymentWhereInput = {
+  private listWhere(messId: string, query: ListPaymentsQueryDto): Prisma.PaymentWhereInput {
+    return {
       messId,
       method: query.method,
       status: query.status,
@@ -159,6 +159,20 @@ export class PaymentsService {
       paymentDate: { ...(query.from ? { gte: fromDateString(query.from) } : {}), ...(query.to ? { lte: fromDateString(query.to) } : {}) },
       ...(query.search ? { student: { AND: studentSearchTerms(query.search) } } : {}),
     };
+  }
+
+  /** Money collected in the filtered set: RECORDED payments only (reversed rows never count). */
+  async collectedTotal(messId: string, query: ListPaymentsQueryDto) {
+    const where = { ...this.listWhere(messId, query), status: PaymentTransactionStatus.RECORDED };
+    const [sum, reversed] = await Promise.all([
+      this.prisma.payment.aggregate({ where, _sum: { amountPaise: true }, _count: { _all: true } }),
+      this.prisma.payment.count({ where: { ...this.listWhere(messId, query), status: PaymentTransactionStatus.REVERSED } }),
+    ]);
+    return { collectedPaise: sum._sum.amountPaise ?? 0, recordedCount: sum._count._all, reversedCount: reversed };
+  }
+
+  async list(messId: string, query: ListPaymentsQueryDto) {
+    const where = this.listWhere(messId, query);
     const order = query.sortOrder ?? 'desc';
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.payment.findMany({
@@ -189,8 +203,22 @@ export class PaymentsService {
   }
 
   /** Non-cancelled subscriptions with money still due (field-to-field comparison runs in SQL). */
+  /** Total due and number of students owing for the filtered dues set. */
+  async duesTotals(messId: string, query: DuesQueryDto) {
+    const where = this.duesWhere(messId, query);
+    const [sums, students] = await Promise.all([
+      this.prisma.studentSubscription.aggregate({ where, _sum: { planPricePaise: true, amountPaidPaise: true } }),
+      this.prisma.studentSubscription.findMany({ where, select: { studentId: true }, distinct: ['studentId'] }),
+    ]);
+    return { duePaise: (sums._sum.planPricePaise ?? 0) - (sums._sum.amountPaidPaise ?? 0), studentsOwing: students.length };
+  }
+
   async dues(messId: string, query: DuesQueryDto) {
-    const where: Prisma.StudentSubscriptionWhereInput = {
+    return this.dueItems(this.duesWhere(messId, query), query, [{ endDate: 'asc' }, { id: 'asc' }]);
+  }
+
+  private duesWhere(messId: string, query: DuesQueryDto): Prisma.StudentSubscriptionWhereInput {
+    return {
       messId,
       cancelledAt: null,
       amountPaidPaise: { lt: this.priceRef },
@@ -198,7 +226,6 @@ export class PaymentsService {
       student: { status: { not: StudentStatus.ARCHIVED }, ...(query.search ? { AND: studentSearchTerms(query.search) } : {}) },
       ...(query.subscriptionStatus ? statusWhere(query.subscriptionStatus, businessToday()) : {}),
     };
-    return this.dueItems(where, query, [{ endDate: 'asc' }, { id: 'asc' }]);
   }
 
   /**
