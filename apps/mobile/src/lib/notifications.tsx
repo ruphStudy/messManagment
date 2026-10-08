@@ -10,6 +10,10 @@ import { registerForPush } from './push';
 const ROUTES: Record<string, Href> = { home: '/', payments: '/payments', menu: '/menu', pause: '/pause', plans: '/plans' };
 
 export function openNotificationTarget(data: NotificationData | null | undefined) {
+  if (data?.screen === 'complaint' && typeof data.complaintId === 'string') {
+    router.push({ pathname: '/complaint', params: { id: data.complaintId } });
+    return;
+  }
   const route = data?.screen && ROUTES[data.screen];
   if (route) router.push(route);
 }

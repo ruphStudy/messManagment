@@ -105,6 +105,8 @@ enum NotificationType {
   MEAL_PAUSE_CREATED
   MEAL_PAUSE_CANCELLED
   MANUAL_REMINDER
+  COMPLAINT_UPDATED
+  COMPLAINT_CREATED
   SYSTEM
 }
 
@@ -118,6 +120,35 @@ enum PushStatus {
 enum PushPlatform {
   IOS
   ANDROID
+}
+
+enum FeedbackType {
+  MEAL
+  GENERAL
+}
+
+enum ComplaintCategory {
+  FOOD_QUALITY
+  QUANTITY
+  CLEANLINESS
+  WRONG_OR_MISSING_ITEM
+  STAFF_BEHAVIOUR
+  PAYMENT
+  QR_ATTENDANCE
+  MENU
+  OTHER
+}
+
+/// Order matters: open first when sorting the queue.
+enum ComplaintStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum MessageAuthor {
+  STUDENT
+  MESS
 }
 
 enum MessType {
@@ -157,6 +188,9 @@ model User {
   memberships            MessMembership[]
   sessions               Session[]
   studentProfiles        MessStudent[]
+  complaintMessages      ComplaintMessage[]
+  resolvedComplaints     Complaint[]             @relation("ComplaintResolvedBy")
+  uploadedFiles          StoredFile[]
   notifications          Notification[]          @relation("NotificationRecipient")
   sentNotifications      Notification[]          @relation("NotificationSender")
   pushDevices            PushDevice[]
@@ -215,6 +249,9 @@ model Mess {
   expenseCategories ExpenseCategory[]
   expenses          Expense[]
   notifications     Notification[]
+  feedback          Feedback[]
+  complaints        Complaint[]
+  files             StoredFile[]
 
   @@index([ownerId])
   @@map("messes")
@@ -308,6 +345,8 @@ model MessStudent {
   mealAttendances MealAttendance[]
   mealPauses      MealPause[]
   payments        Payment[]
+  feedbacks       Feedback[]
+  complaints      Complaint[]
 
   /// One record per person per mess (archived records are restored, not duplicated).
   @@unique([messId, mobile])
@@ -436,6 +475,8 @@ model MealAttendance {
   subscription StudentSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
   servedBy     User?               @relation("ServedBy", fields: [servedById], references: [id], onDelete: SetNull)
   reversedBy   User?               @relation("ReversedBy", fields: [reversedById], references: [id], onDelete: SetNull)
+
+  feedback Feedback?
 
   @@unique([messId, studentId, attendanceDate, mealType, servedMarker])
   @@index([messId, attendanceDate, mealType])
@@ -626,4 +667,96 @@ model NotificationPreference {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notification_preferences")
+}
+
+/// Meal rating (tied to one served attendance) or general feedback. Private to the mess.
+model Feedback {
+  id                String       @id @default(uuid()) @db.Uuid
+  messId            String       @db.Uuid
+  studentId         String       @db.Uuid
+  type              FeedbackType
+  /// MEAL only; one feedback per attendance.
+  attendanceId      String?      @unique @db.Uuid
+  feedbackDate      DateTime     @db.Date
+  mealType          MealType?
+  overallRating     Int?
+  tasteRating       Int?
+  qualityRating     Int?
+  quantityRating    Int?
+  cleanlinessRating Int?
+  comment           String?      @db.VarChar(1000)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  mess       Mess            @relation(fields: [messId], references: [id], onDelete: Cascade)
+  student    MessStudent     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  attendance MealAttendance? @relation(fields: [attendanceId], references: [id], onDelete: SetNull)
+
+  @@index([messId, feedbackDate])
+  @@index([messId, type, feedbackDate])
+  @@index([studentId, feedbackDate])
+  @@map("feedback")
+}
+
+/// An issue raised by a student. Never deleted; resolved is final.
+model Complaint {
+  id             String            @id @default(uuid()) @db.Uuid
+  messId         String            @db.Uuid
+  studentId      String            @db.Uuid
+  category       ComplaintCategory
+  description    String            @db.VarChar(1000)
+  status         ComplaintStatus   @default(OPEN)
+  attachmentId   String?           @unique @db.Uuid
+  idempotencyKey String?           @db.VarChar(64)
+  inProgressAt   DateTime?
+  resolvedAt     DateTime?
+  resolvedById   String?           @db.Uuid
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  mess       Mess               @relation(fields: [messId], references: [id], onDelete: Cascade)
+  student    MessStudent        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  attachment StoredFile?        @relation(fields: [attachmentId], references: [id], onDelete: SetNull)
+  resolvedBy User?              @relation("ComplaintResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
+  messages   ComplaintMessage[]
+
+  @@unique([studentId, idempotencyKey])
+  @@index([messId, status, createdAt])
+  @@index([messId, category, createdAt])
+  @@index([studentId, createdAt])
+  @@map("complaints")
+}
+
+/// Append-only reply history on a complaint (no edits or deletes).
+model ComplaintMessage {
+  id          String        @id @default(uuid()) @db.Uuid
+  complaintId String        @db.Uuid
+  authorId    String?       @db.Uuid
+  author      MessageAuthor
+  message     String        @db.VarChar(1000)
+  createdAt   DateTime      @default(now())
+
+  complaint Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  user      User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([complaintId, createdAt])
+  @@map("complaint_messages")
+}
+
+/// An uploaded file. Bytes live in the storage provider under a random key; served only via an authorized endpoint.
+model StoredFile {
+  id           String   @id @default(uuid()) @db.Uuid
+  messId       String   @db.Uuid
+  uploadedById String   @db.Uuid
+  storageKey   String   @unique @db.VarChar(100)
+  mimeType     String   @db.VarChar(40)
+  sizeBytes    Int
+  createdAt    DateTime @default(now())
+
+  mess       Mess       @relation(fields: [messId], references: [id], onDelete: Cascade)
+  uploadedBy User       @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+  complaint  Complaint?
+
+  @@index([messId])
+  @@map("stored_files")
 }

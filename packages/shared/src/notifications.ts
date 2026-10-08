@@ -8,6 +8,10 @@ export const NotificationType = {
   MEAL_PAUSE_CREATED: 'MEAL_PAUSE_CREATED',
   MEAL_PAUSE_CANCELLED: 'MEAL_PAUSE_CANCELLED',
   MANUAL_REMINDER: 'MANUAL_REMINDER',
+  /** To the student: status change or reply on their complaint. */
+  COMPLAINT_UPDATED: 'COMPLAINT_UPDATED',
+  /** To owner/manager: a new complaint was raised. */
+  COMPLAINT_CREATED: 'COMPLAINT_CREATED',
   SYSTEM: 'SYSTEM',
 } as const;
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
@@ -36,6 +40,8 @@ export const NotificationScreen = {
   PLANS: 'plans',
   DUES: 'dues',
   SUBSCRIPTIONS: 'subscriptions',
+  /** With `complaintId`. */
+  COMPLAINT: 'complaint',
 } as const;
 export type NotificationScreen = (typeof NotificationScreen)[keyof typeof NotificationScreen];
 

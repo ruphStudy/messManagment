@@ -18,6 +18,8 @@ const ICONS: Record<NotificationType, keyof typeof Ionicons.glyphMap> = {
   MEAL_PAUSE_CREATED: 'pause-circle-outline',
   MEAL_PAUSE_CANCELLED: 'play-circle-outline',
   MANUAL_REMINDER: 'megaphone-outline',
+  COMPLAINT_UPDATED: 'chatbubble-ellipses-outline',
+  COMPLAINT_CREATED: 'chatbubble-ellipses-outline',
   SYSTEM: 'information-circle-outline',
 };
 const timeFormat = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });

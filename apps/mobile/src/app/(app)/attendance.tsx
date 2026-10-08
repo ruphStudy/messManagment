@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { AttendanceStatus, MEAL_LABELS, type PaginationMeta, type StudentAttendanceItem } from '@mess/shared';
 import { Button } from '@/components/button';
@@ -68,6 +69,7 @@ export default function AttendanceHistoryScreen() {
       renderItem={({ item }) => <Row item={item} />}
       refreshing={loading && meta?.page === 1}
       onRefresh={() => load(1)}
+      ListHeaderComponent={items.length ? <Button title="Rate a recent meal" variant="ghost" onPress={() => router.push('/rate-meal')} /> : null}
       ListEmptyComponent={<EmptyState icon="time-outline" title="No meals recorded yet." description="Meals you take at the mess will appear here." />}
       ListFooterComponent={
         hasMore ? (loading ? <ActivityIndicator color={colors.brand600} /> : <Button title="Load more" variant="secondary" onPress={() => load(meta!.page + 1)} />) : null

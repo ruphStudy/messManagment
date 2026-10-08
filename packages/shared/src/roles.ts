@@ -69,6 +69,12 @@ export const Permission = {
   FINANCE_VIEW: 'finance:view',
   /** Send payment/manual reminders and run expiry reminders. Staff cannot. */
   REMINDER_SEND: 'reminder:send',
+  /** Ratings and general feedback (owner/manager). */
+  FEEDBACK_VIEW: 'feedback:view',
+  /** Complaint queue: staff can view. */
+  COMPLAINT_VIEW: 'complaint:view',
+  /** Change complaint status and reply (owner/manager). */
+  COMPLAINT_MANAGE: 'complaint:manage',
   STUDENT_SELF: 'student:self',
 } as const;
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -103,6 +109,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.EXPENSE_MANAGE,
     Permission.FINANCE_VIEW,
     Permission.REMINDER_SEND,
+    Permission.FEEDBACK_VIEW,
+    Permission.COMPLAINT_VIEW,
+    Permission.COMPLAINT_MANAGE,
   ],
   MESS_MANAGER: [
     Permission.MESS_VIEW,
@@ -128,6 +137,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.EXPENSE_MANAGE,
     Permission.FINANCE_VIEW,
     Permission.REMINDER_SEND,
+    Permission.FEEDBACK_VIEW,
+    Permission.COMPLAINT_VIEW,
+    Permission.COMPLAINT_MANAGE,
   ],
   MESS_STAFF: [
     Permission.MESS_VIEW,
@@ -139,6 +151,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.ATTENDANCE_MARK,
     Permission.PAUSE_VIEW,
     Permission.PAYMENT_VIEW,
+    Permission.COMPLAINT_VIEW,
   ],
   STUDENT: [Permission.STUDENT_SELF],
 };

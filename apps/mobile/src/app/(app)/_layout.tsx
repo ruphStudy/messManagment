@@ -47,6 +47,11 @@ export default function AppTabsLayout() {
         { name: 'receipt', title: 'Receipt' },
         { name: 'notifications', title: 'Notifications' },
         { name: 'notification-settings', title: 'Notification settings' },
+        { name: 'rate-meal', title: 'Rate a meal' },
+        { name: 'give-feedback', title: 'Give feedback' },
+        { name: 'complaints', title: 'My complaints' },
+        { name: 'complaint-new', title: 'Raise a complaint' },
+        { name: 'complaint', title: 'Complaint' },
       ].map(({ name, title }) => (
         <Tabs.Screen
           key={name}

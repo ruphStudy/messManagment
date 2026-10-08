@@ -122,3 +122,12 @@ export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) return error.message;
   return 'Something went wrong. Please try again.';
 }
+
+/** Authorized binary download (e.g. a complaint photo) as an object URL. Caller revokes it. */
+export async function apiObjectUrl(path: string): Promise<string> {
+  const get = () => fetch(`${API_PREFIX}${path}`, { headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {}, credentials: 'same-origin' });
+  let res = await get();
+  if (res.status === 401 && (await refreshSession())) res = await get();
+  if (!res.ok) throw new ApiError(res.status, ErrorCode.FILE_NOT_FOUND, 'Could not load the file');
+  return URL.createObjectURL(await res.blob());
+}

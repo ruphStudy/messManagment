@@ -1,7 +1,8 @@
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { formatPaise, STUDENT_STATUS_LABELS, StudentStatus } from '@mess/shared';
+import { formatPaise, MEAL_LABELS, STUDENT_STATUS_LABELS, StudentStatus, type EligibleMeal } from '@mess/shared';
 import { Card, Screen } from '@/components/layout';
 import { NotLinkedCard } from '@/components/not-linked';
 import { ErrorState, FullScreenLoader } from '@/components/states';
@@ -12,6 +13,7 @@ import { AppText } from '@/components/text';
 import { useAuth } from '@/lib/auth';
 import { formatDate, useStudentProfile } from '@/lib/student-profile';
 import { useMySubscription } from '@/lib/use-my-subscription';
+import { api } from '@/lib/api';
 import { useFees } from '@/lib/use-fees';
 import { usePauseSettings } from '@/lib/use-pause-settings';
 import { useStudentMenu } from '@/lib/use-student-menu';
@@ -54,6 +56,11 @@ export default function HomeScreen() {
   const todayMenu = useStudentMenu('today');
   const pauseSettings = usePauseSettings();
   const fees = useFees();
+  const [toRate, setToRate] = useState<EligibleMeal | null>(null);
+  const loadToRate = () => api<EligibleMeal[]>('/students/me/feedback/eligible-meals').then((m) => setToRate(m[0] ?? null)).catch(() => setToRate(null));
+  useEffect(() => {
+    void loadToRate();
+  }, []);
   const { data, loading, error } = profileState;
 
   if (!data && loading) return <FullScreenLoader />;
@@ -66,6 +73,7 @@ export default function HomeScreen() {
     void todayMenu.reload();
     void pauseSettings.reload();
     void fees.reload();
+    void loadToRate();
   };
 
   return (
@@ -90,6 +98,13 @@ export default function HomeScreen() {
           )}
           {pauseSettings.data?.linked && <TodayMealsStrip meals={pauseSettings.data.todayMeals} />}
           <TodayMenuPreview data={todayMenu.data} />
+          {toRate && (
+            <Pressable onPress={() => router.push('/rate-meal')} accessibilityRole="button" style={styles.feeRow}>
+              <Ionicons name="star-outline" size={20} color="#f59e0b" />
+              <AppText style={{ flex: 1, fontWeight: '600' }}>Rate your recent {MEAL_LABELS[toRate.mealType].toLowerCase()}</AppText>
+              <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
+            </Pressable>
+          )}
           <PlanSection data={subscription.data} error={subscription.error} reload={subscription.reload} />
           {fees.data?.linked && fees.data.subscriptions.length > 0 && (
             <Pressable onPress={() => router.push('/payments')} accessibilityRole="button" style={styles.feeRow}>

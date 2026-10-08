@@ -18,6 +18,8 @@ export interface AppConfig {
   expoAccessToken: string | null;
   /** Run the daily expiry-reminder job in this process. */
   schedulerEnabled: boolean;
+  /** Directory for uploaded files (local storage provider). */
+  uploadDir: string;
 }
 
 export const APP_CONFIG = Symbol('APP_CONFIG');
@@ -72,6 +74,7 @@ export function loadConfig(): AppConfig {
     expoPushUrl: process.env.EXPO_PUSH_URL ?? 'https://exp.host/--/api/v2/push/send',
     expoAccessToken: process.env.EXPO_ACCESS_TOKEN || null,
     schedulerEnabled: process.env.SCHEDULER_ENABLED !== 'false',
+    uploadDir: process.env.UPLOAD_DIR ?? 'uploads',
   };
 }
 

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, Circle } from 'lucide-react';
-import { addDays, businessToday, can, formatPaise, MEAL_KEYS, MEAL_LABELS, Permission, Role, startOfWeek, type AttendanceSummary, type ExpectedMeals, type MealPlan, type MenuDay, type ExpenseSummary, type PaymentDashboardSummary } from '@mess/shared';
+import { addDays, businessToday, can, formatPaise, MEAL_KEYS, MEAL_LABELS, Permission, Role, startOfWeek, type AttendanceSummary, type ExpectedMeals, type MealPlan, type MenuDay, type ComplaintCounts, type ExpenseSummary, type PaymentDashboardSummary, type RatingSummary } from '@mess/shared';
 import { FinanceCard } from '@/components/expenses/finance-card';
 import { MenuStatusBadge } from '@/components/menu/menu-status-badge';
 import { mealSummary } from '@/lib/menu';
@@ -118,6 +118,36 @@ function ExpensesCard({ canAdd }: { canAdd: boolean }) {
   );
 }
 
+function FeedbackCard({ showRatings }: { showRatings: boolean }) {
+  const [ratings, setRatings] = useState<RatingSummary | null>(null);
+  const [counts, setCounts] = useState<ComplaintCounts | null>(null);
+  useEffect(() => {
+    const today = businessToday();
+    if (showRatings) api<RatingSummary>(`/feedback/summary?from=${today.slice(0, 7)}-01&to=${today}`).then(setRatings).catch(() => setRatings(null));
+    api<ComplaintCounts>('/complaints/counts').then(setCounts).catch(() => setCounts(null));
+  }, [showRatings]);
+  const avg = ratings?.averages.overall;
+  return (
+    <Card className="md:col-span-5">
+      <CardHeader title="Feedback & complaints" />
+      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {showRatings && (
+          <>
+            <div><dt className="text-sm text-ink-muted">Avg rating (month)</dt><dd className="text-xl font-bold">{ratings ? (avg == null ? '—' : `${avg.toFixed(1)}★`) : '–'}</dd></div>
+            <div><dt className="text-sm text-ink-muted">Ratings (month)</dt><dd className="text-xl font-bold">{ratings ? ratings.mealCount + ratings.generalCount : '–'}</dd></div>
+          </>
+        )}
+        <div><dt className="text-sm text-ink-muted">Open complaints</dt><dd className="text-xl font-bold text-danger">{counts ? counts.OPEN : '–'}</dd></div>
+        <div><dt className="text-sm text-ink-muted">In progress</dt><dd className="text-xl font-bold">{counts ? counts.IN_PROGRESS : '–'}</dd></div>
+      </dl>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {showRatings && <Link href="/feedback" className="inline-flex min-h-11 items-center rounded-control border border-border px-4 text-sm font-semibold hover:bg-canvas">View feedback</Link>}
+        <Link href="/complaints?status=OPEN" className="inline-flex min-h-11 items-center rounded-control border border-border px-4 text-sm font-semibold hover:bg-canvas">View complaints</Link>
+      </div>
+    </Card>
+  );
+}
+
 /** Deterministic planning numbers: plans valid tomorrow minus pauses. */
 function TomorrowMealsCard() {
   const [counts, setCounts] = useState<ExpectedMeals | null>(null);
@@ -212,6 +242,7 @@ export default function DashboardPage() {
         {can(session.role, Permission.PAYMENT_VIEW) && <PaymentsCard canRecord={can(session.role, Permission.PAYMENT_RECORD)} />}
         {can(session.role, Permission.EXPENSE_VIEW) && <ExpensesCard canAdd={can(session.role, Permission.EXPENSE_MANAGE)} />}
         {can(session.role, Permission.FINANCE_VIEW) && <FinanceCard month={businessToday().slice(0, 7)} className="md:col-span-3" title="This month: collected vs spent" />}
+        {can(session.role, Permission.COMPLAINT_VIEW) && <FeedbackCard showRatings={can(session.role, Permission.FEEDBACK_VIEW)} />}
         <TomorrowMealsCard />
         <TodayAttendanceCard canScan={can(session.role, Permission.ATTENDANCE_MARK)} />
         <TodayMenuCard />

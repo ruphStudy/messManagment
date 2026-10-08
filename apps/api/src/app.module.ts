@@ -21,6 +21,9 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { RemindersModule } from './modules/reminders/reminders.module';
+import { FeedbackModule } from './modules/feedback/feedback.module';
+import { ComplaintsModule } from './modules/complaints/complaints.module';
+import { FilesModule } from './modules/files/files.module';
 
 @Module({
   imports: [
@@ -40,6 +43,9 @@ import { RemindersModule } from './modules/reminders/reminders.module';
     PaymentsModule,
     ExpensesModule,
     RemindersModule,
+    FilesModule,
+    FeedbackModule,
+    ComplaintsModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -11,5 +11,6 @@ const WEB_ROUTES: Record<string, string> = {
 };
 
 export function notificationHref(data: NotificationData | null): string | null {
+  if (data?.screen === 'complaint' && typeof data.complaintId === 'string') return `/complaints/${data.complaintId}`;
   return (data?.screen && WEB_ROUTES[data.screen]) || null;
 }

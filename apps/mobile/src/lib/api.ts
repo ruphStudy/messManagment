@@ -39,8 +39,9 @@ interface RequestOptions {
 }
 
 async function send<T>(path: string, { method = 'GET', body, auth = true }: RequestOptions): Promise<ApiSuccess<T>> {
+  const isForm = body instanceof FormData;
   const headers: Record<string, string> = { Accept: 'application/json', [CLIENT_HEADER]: ClientType.MOBILE };
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
   if (auth && accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
   const controller = new AbortController();
@@ -50,7 +51,7 @@ async function send<T>(path: string, { method = 'GET', body, auth = true }: Requ
     res = await fetch(`${BASE_URL}${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
       signal: controller.signal,
     });
   } catch {
@@ -129,6 +130,11 @@ export async function logoutRequest() {
   } finally {
     await clearSession();
   }
+}
+
+/** URL + auth header for private files (e.g. complaint photos) shown with <Image>. */
+export function authorizedFileSource(fileId: string) {
+  return { uri: `${BASE_URL}/files/${fileId}`, headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined };
 }
 
 export function errorMessage(error: unknown) {

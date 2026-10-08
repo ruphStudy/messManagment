@@ -13,3 +13,4 @@ ios/
 android/
 next-env.d.ts
 expo-env.d.ts
+apps/api/uploads/
