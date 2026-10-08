@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { STUDENT_STATUS_LABELS, StudentStatus } from '@mess/shared';
+import { formatPaise, STUDENT_STATUS_LABELS, StudentStatus } from '@mess/shared';
 import { Card, Screen } from '@/components/layout';
 import { NotLinkedCard } from '@/components/not-linked';
 import { ErrorState, FullScreenLoader } from '@/components/states';
@@ -12,6 +12,7 @@ import { AppText } from '@/components/text';
 import { useAuth } from '@/lib/auth';
 import { formatDate, useStudentProfile } from '@/lib/student-profile';
 import { useMySubscription } from '@/lib/use-my-subscription';
+import { useFees } from '@/lib/use-fees';
 import { usePauseSettings } from '@/lib/use-pause-settings';
 import { useStudentMenu } from '@/lib/use-student-menu';
 import { colors, spacing, TOUCH_TARGET } from '@/theme/tokens';
@@ -52,6 +53,7 @@ export default function HomeScreen() {
   const subscription = useMySubscription();
   const todayMenu = useStudentMenu('today');
   const pauseSettings = usePauseSettings();
+  const fees = useFees();
   const { data, loading, error } = profileState;
 
   if (!data && loading) return <FullScreenLoader />;
@@ -63,6 +65,7 @@ export default function HomeScreen() {
     void subscription.reload();
     void todayMenu.reload();
     void pauseSettings.reload();
+    void fees.reload();
   };
 
   return (
@@ -88,6 +91,15 @@ export default function HomeScreen() {
           {pauseSettings.data?.linked && <TodayMealsStrip meals={pauseSettings.data.todayMeals} />}
           <TodayMenuPreview data={todayMenu.data} />
           <PlanSection data={subscription.data} error={subscription.error} reload={subscription.reload} />
+          {fees.data?.linked && fees.data.subscriptions.length > 0 && (
+            <Pressable onPress={() => router.push('/payments')} accessibilityRole="button" style={styles.feeRow}>
+              <Ionicons name="wallet-outline" size={20} color={fees.data.totalDuePaise ? colors.danger : colors.success} />
+              <AppText style={{ flex: 1, color: fees.data.totalDuePaise ? colors.danger : colors.success, fontWeight: '600' }}>
+                {fees.data.totalDuePaise ? `Due: ${formatPaise(fees.data.totalDuePaise)}` : 'Fees paid in full'}
+              </AppText>
+              <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
+            </Pressable>
+          )}
         </>
       ) : (
         <NotLinkedCard mobile={session?.user.mobile ?? ''} />
@@ -100,5 +112,6 @@ const styles = StyleSheet.create({
   greeting: { gap: spacing.xs, marginBottom: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   flex: { flex: 1 },
+  feeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: TOUCH_TARGET, paddingHorizontal: spacing.lg, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   link: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, minHeight: TOUCH_TARGET },
 });

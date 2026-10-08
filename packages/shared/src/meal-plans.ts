@@ -100,6 +100,8 @@ export interface SubscriptionSummary {
   /** Days left including today, for active subscriptions only. */
   daysRemaining: number | null;
   cancelledAt: string | null;
+  /** Fee / paid / due for this subscription. */
+  payment: import('./payments').SubscriptionPaymentSummary;
 }
 
 export interface SubscriptionStudent {

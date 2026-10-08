@@ -15,6 +15,7 @@ import {
 } from '@mess/shared';
 import { mealsLeftLabel, SubscriptionStatusBadge } from '@/components/subscriptions/subscription-badges';
 import { SubscriptionDialog, type SubscriptionDialogMode } from '@/components/subscriptions/subscription-dialog';
+import { SubscriptionPaymentCard } from '@/components/payments/subscription-payment-card';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { PageLoader } from '@/components/ui/loader';
@@ -142,6 +143,10 @@ export default function SubscriptionDetailPage({ params }: { params: Promise<{ i
           />
           {planRenamed && <p className="mt-3 text-xs text-ink-muted">This plan is now called “{sub.mealPlan!.name}”.</p>}
         </Card>
+      </div>
+
+      <div className="mt-4">
+        <SubscriptionPaymentCard sub={sub} student={{ id: sub.student.id, name }} onChanged={load} />
       </div>
 
       <p className="mt-4 text-xs text-ink-muted">

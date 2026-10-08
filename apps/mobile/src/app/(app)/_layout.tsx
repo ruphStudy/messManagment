@@ -40,6 +40,7 @@ export default function AppTabsLayout() {
       {[
         { name: 'plans', title: 'Plan history' },
         { name: 'attendance', title: 'Meal history' },
+        { name: 'receipt', title: 'Receipt' },
       ].map(({ name, title }) => (
         <Tabs.Screen
           key={name}

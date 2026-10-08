@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, Circle } from 'lucide-react';
-import { addDays, businessToday, can, MEAL_KEYS, MEAL_LABELS, Permission, Role, startOfWeek, type AttendanceSummary, type ExpectedMeals, type MealPlan, type MenuDay } from '@mess/shared';
+import { addDays, businessToday, can, formatPaise, MEAL_KEYS, MEAL_LABELS, Permission, Role, startOfWeek, type AttendanceSummary, type ExpectedMeals, type MealPlan, type MenuDay, type PaymentDashboardSummary } from '@mess/shared';
 import { MenuStatusBadge } from '@/components/menu/menu-status-badge';
 import { mealSummary } from '@/lib/menu';
 import { api, apiEnvelope } from '@/lib/api';
@@ -58,6 +58,38 @@ function TodayAttendanceCard({ canScan }: { canScan: boolean }) {
         ))}
       </dl>
       <Link href="/attendance" className="mt-3 inline-flex min-h-11 items-center font-semibold text-brand-700 hover:underline">View attendance →</Link>
+    </Card>
+  );
+}
+
+function PaymentsCard({ canRecord }: { canRecord: boolean }) {
+  const [summary, setSummary] = useState<PaymentDashboardSummary | null>(null);
+  useEffect(() => {
+    api<PaymentDashboardSummary>('/payments/summary').then(setSummary).catch(() => setSummary(null));
+  }, []);
+  const stats: [string, string][] = summary
+    ? [
+        ['Collected today', formatPaise(summary.collectedTodayPaise)],
+        ['This month', formatPaise(summary.collectedThisMonthPaise)],
+        ['Pending dues', formatPaise(summary.pendingDuesPaise)],
+        ['Students owing', String(summary.studentsWithDues)],
+      ]
+    : [['Collected today', '–'], ['This month', '–'], ['Pending dues', '–'], ['Students owing', '–']];
+  return (
+    <Card className="md:col-span-5">
+      <CardHeader title="Payments" />
+      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {stats.map(([label, value]) => (
+          <div key={label}>
+            <dt className="text-sm text-ink-muted">{label}</dt>
+            <dd className="text-xl font-bold">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {canRecord && <Link href="/payments?record=1" className="inline-flex min-h-11 items-center rounded-control bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Record payment</Link>}
+        <Link href="/payments/dues" className="inline-flex min-h-11 items-center rounded-control border border-border px-4 text-sm font-semibold hover:bg-canvas">View dues</Link>
+      </div>
     </Card>
   );
 }
@@ -153,6 +185,7 @@ export default function DashboardPage() {
       <PageHeader title={`Welcome, ${session.user.firstName}!`} description={session.membership.mess.name} />
 
       <div className="grid gap-4 md:grid-cols-5">
+        {can(session.role, Permission.PAYMENT_VIEW) && <PaymentsCard canRecord={can(session.role, Permission.PAYMENT_RECORD)} />}
         <TomorrowMealsCard />
         <TodayAttendanceCard canScan={can(session.role, Permission.ATTENDANCE_MARK)} />
         <TodayMenuCard />

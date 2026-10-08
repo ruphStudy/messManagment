@@ -59,6 +59,9 @@ export const Permission = {
   PAUSE_VIEW: 'pause:view',
   /** Add or cancel pauses for students. */
   PAUSE_MANAGE: 'pause:manage',
+  PAYMENT_VIEW: 'payment:view',
+  PAYMENT_RECORD: 'payment:record',
+  PAYMENT_REVERSE: 'payment:reverse',
   STUDENT_SELF: 'student:self',
 } as const;
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -86,6 +89,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.ATTENDANCE_REVERSE,
     Permission.PAUSE_VIEW,
     Permission.PAUSE_MANAGE,
+    Permission.PAYMENT_VIEW,
+    Permission.PAYMENT_RECORD,
+    Permission.PAYMENT_REVERSE,
   ],
   MESS_MANAGER: [
     Permission.MESS_VIEW,
@@ -104,6 +110,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.ATTENDANCE_REVERSE,
     Permission.PAUSE_VIEW,
     Permission.PAUSE_MANAGE,
+    Permission.PAYMENT_VIEW,
+    Permission.PAYMENT_RECORD,
+    Permission.PAYMENT_REVERSE,
   ],
   MESS_STAFF: [
     Permission.MESS_VIEW,
@@ -114,6 +123,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.ATTENDANCE_VIEW,
     Permission.ATTENDANCE_MARK,
     Permission.PAUSE_VIEW,
+    Permission.PAYMENT_VIEW,
   ],
   STUDENT: [Permission.STUDENT_SELF],
 };

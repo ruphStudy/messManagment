@@ -33,7 +33,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Menu', href: '/menu', icon: UtensilsCrossed, permission: Permission.MENU_VIEW },
   { label: 'Attendance', href: '/attendance', icon: CalendarCheck, permission: Permission.ATTENDANCE_VIEW },
   { label: 'Meal Pause', href: '/pauses', icon: PauseCircle, permission: Permission.PAUSE_VIEW },
-  { label: 'Payments', href: '/payments', icon: CreditCard, soon: true },
+  { label: 'Payments', href: '/payments', icon: CreditCard, permission: Permission.PAYMENT_VIEW },
   { label: 'Expenses', href: '/expenses', icon: Wallet, soon: true },
   { label: 'Feedback', href: '/feedback', icon: MessageSquare, soon: true },
   { label: 'Reports', href: '/reports', icon: BarChart3, soon: true },

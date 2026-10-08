@@ -80,6 +80,18 @@ enum PauseSource {
   MESS
 }
 
+enum PaymentMethod {
+  CASH
+  UPI
+  BANK_TRANSFER
+  OTHER
+}
+
+enum PaymentStatus {
+  RECORDED
+  REVERSED
+}
+
 enum MessType {
   STUDENT_MESS
   PG_HOSTEL
@@ -113,14 +125,16 @@ model User {
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
-  ownedMesses     Mess[]           @relation("MessOwner")
-  memberships     MessMembership[]
-  sessions        Session[]
-  studentProfiles MessStudent[]
-  servedMeals     MealAttendance[] @relation("ServedBy")
-  reversedMeals   MealAttendance[] @relation("ReversedBy")
-  createdPauses   MealPause[]      @relation("PauseCreatedBy")
-  cancelledPauses MealPause[]      @relation("PauseCancelledBy")
+  ownedMesses      Mess[]           @relation("MessOwner")
+  memberships      MessMembership[]
+  sessions         Session[]
+  studentProfiles  MessStudent[]
+  recordedPayments Payment[]        @relation("PaymentRecordedBy")
+  reversedPayments Payment[]        @relation("PaymentReversedBy")
+  servedMeals      MealAttendance[] @relation("ServedBy")
+  reversedMeals    MealAttendance[] @relation("ReversedBy")
+  createdPauses    MealPause[]      @relation("PauseCreatedBy")
+  cancelledPauses  MealPause[]      @relation("PauseCancelledBy")
 
   @@map("users")
 }
@@ -149,6 +163,8 @@ model Mess {
   breakfastPauseCutoff String     @default("06:00") @db.VarChar(5)
   lunchPauseCutoff     String     @default("09:00") @db.VarChar(5)
   dinnerPauseCutoff    String     @default("16:00") @db.VarChar(5)
+  /// Last receipt number issued by this mess (receipts are RCPT-YYYY-000123).
+  receiptSequence      Int        @default(0)
   status               MessStatus @default(ACTIVE)
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
@@ -161,6 +177,7 @@ model Mess {
   menus         DailyMenu[]
   attendance    MealAttendance[]
   pauses        MealPause[]
+  payments      Payment[]
 
   @@index([ownerId])
   @@map("messes")
@@ -253,6 +270,7 @@ model MessStudent {
   subscriptions   StudentSubscription[]
   mealAttendances MealAttendance[]
   mealPauses      MealPause[]
+  payments        Payment[]
 
   /// One record per person per mess (archived records are restored, not duplicated).
   @@unique([messId, mobile])
@@ -306,6 +324,8 @@ model StudentSubscription {
   endDate              DateTime         @db.Date
   totalMealCredits     Int?
   remainingMealCredits Int?
+  /// Sum of RECORDED payments (paise). Maintained only by PaymentsService inside the student lock.
+  amountPaidPaise      Int              @default(0)
   cancelledAt          DateTime?
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
@@ -315,6 +335,7 @@ model StudentSubscription {
   mealPlan   MealPlan?        @relation(fields: [mealPlanId], references: [id], onDelete: SetNull)
   attendance MealAttendance[]
   mealPauses MealPause[]
+  payments   Payment[]
 
   @@index([messId, endDate])
   @@index([messId, startDate])
@@ -417,4 +438,43 @@ model MealPause {
   @@index([messId, pauseDate, mealType])
   @@index([studentId, pauseDate])
   @@map("meal_pauses")
+}
+
+/// Money received by the mess against one subscription. Never deleted; mistakes are reversed.
+model Payment {
+  id                String        @id @default(uuid()) @db.Uuid
+  messId            String        @db.Uuid
+  studentId         String        @db.Uuid
+  subscriptionId    String        @db.Uuid
+  receiptNumber     String        @db.VarChar(30)
+  amountPaise       Int
+  method            PaymentMethod
+  paymentDate       DateTime      @db.Date
+  referenceNumber   String?       @db.VarChar(60)
+  note              String?       @db.VarChar(200)
+  status            PaymentStatus @default(RECORDED)
+  /// Subscription balance right after this payment was recorded (for the receipt).
+  balanceAfterPaise Int
+  /// Client-generated key so a double-submitted form records only once.
+  idempotencyKey    String?       @db.VarChar(64)
+  recordedById      String?       @db.Uuid
+  reversedAt        DateTime?
+  reversedById      String?       @db.Uuid
+  reversalReason    String?       @db.VarChar(200)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  mess         Mess                @relation(fields: [messId], references: [id], onDelete: Cascade)
+  student      MessStudent         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subscription StudentSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  recordedBy   User?               @relation("PaymentRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
+  reversedBy   User?               @relation("PaymentReversedBy", fields: [reversedById], references: [id], onDelete: SetNull)
+
+  @@unique([messId, receiptNumber])
+  @@unique([messId, idempotencyKey])
+  @@index([messId, paymentDate])
+  @@index([messId, status, paymentDate])
+  @@index([studentId, paymentDate])
+  @@index([subscriptionId])
+  @@map("payments")
 }

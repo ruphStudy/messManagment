@@ -7,6 +7,7 @@ import { StudentActions } from '@/components/students/student-actions';
 import { AppLinkBadge, StudentStatusBadge } from '@/components/students/student-badges';
 import { StudentDetailSkeleton, StudentLoadError } from '@/components/students/student-page-states';
 import { StudentPausesSection } from '@/components/pauses/student-pauses-section';
+import { StudentPaymentsSection } from '@/components/payments/student-payments-section';
 import { StudentSubscriptionsSection } from '@/components/subscriptions/student-subscriptions-section';
 import { Card, CardHeader } from '@/components/ui/card';
 import { formatDate, formatDateTime, formatMobile, fullName } from '@/lib/format';
@@ -77,6 +78,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           </Card>
 
           <StudentSubscriptionsSection student={student} />
+          <StudentPaymentsSection student={student} />
           <StudentPausesSection student={student} />
 
           <div className="grid gap-4 md:grid-cols-2">

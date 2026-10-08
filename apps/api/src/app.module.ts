@@ -16,6 +16,7 @@ import { SubscriptionsModule } from './modules/subscriptions/subscriptions.modul
 import { MenusModule } from './modules/menus/menus.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { PausesModule } from './modules/pauses/pauses.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { PausesModule } from './modules/pauses/pauses.module';
     MenusModule,
     AttendanceModule,
     PausesModule,
+    PaymentsModule,
   ],
   controllers: [HealthController],
   providers: [

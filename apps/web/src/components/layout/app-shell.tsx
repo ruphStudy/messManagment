@@ -136,8 +136,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-dvh lg:pl-64">
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col border-r border-border bg-surface lg:flex">
+    <div className="min-h-dvh lg:pl-64 print:pl-0">
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col border-r border-border bg-surface lg:flex print:hidden">
         <div className="flex h-16 items-center px-5">
           <Logo />
         </div>
@@ -163,7 +163,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-border bg-surface/95 px-4 backdrop-blur sm:px-6">
+      <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-border bg-surface/95 px-4 backdrop-blur sm:px-6 print:hidden">
         <button onClick={() => setDrawerOpen(true)} className="-ml-2 rounded-full p-2 hover:bg-canvas lg:hidden" aria-label="Open menu">
           <Menu className="size-6" />
         </button>
@@ -173,7 +173,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <UserMenu onLogout={() => setConfirmLogout(true)} />
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">{children}</main>
+      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8 print:max-w-none print:p-0">{children}</main>
 
       <ConfirmDialog
         open={confirmLogout}

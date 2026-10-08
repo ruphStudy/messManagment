@@ -1,6 +1,7 @@
 import type { MealPlan, MessStudent, StudentSubscription } from '@prisma/client';
 import {
   daysBetween,
+  paymentSummary,
   SubscriptionStatus,
   subscriptionStatus,
   type SubscriptionDetail,
@@ -34,6 +35,7 @@ export function toSubscriptionSummary(row: StudentSubscription, today: string): 
     remainingMealCredits: row.remainingMealCredits,
     daysRemaining: status === SubscriptionStatus.ACTIVE ? daysBetween(today, endDate) + 1 : null,
     cancelledAt: row.cancelledAt?.toISOString() ?? null,
+    payment: paymentSummary(row.planPricePaise, row.amountPaidPaise),
   };
 }
 
