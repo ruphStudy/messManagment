@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, Circle } from 'lucide-react';
-import { addDays, businessToday, can, formatPaise, MEAL_KEYS, MEAL_LABELS, Permission, Role, startOfWeek, type AttendanceSummary, type ExpectedMeals, type MealPlan, type MenuDay, type PaymentDashboardSummary } from '@mess/shared';
+import { addDays, businessToday, can, formatPaise, MEAL_KEYS, MEAL_LABELS, Permission, Role, startOfWeek, type AttendanceSummary, type ExpectedMeals, type MealPlan, type MenuDay, type ExpenseSummary, type PaymentDashboardSummary } from '@mess/shared';
+import { FinanceCard } from '@/components/expenses/finance-card';
 import { MenuStatusBadge } from '@/components/menu/menu-status-badge';
 import { mealSummary } from '@/lib/menu';
 import { api, apiEnvelope } from '@/lib/api';
@@ -89,6 +90,29 @@ function PaymentsCard({ canRecord }: { canRecord: boolean }) {
       <div className="mt-3 flex flex-wrap gap-2">
         {canRecord && <Link href="/payments?record=1" className="inline-flex min-h-11 items-center rounded-control bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Record payment</Link>}
         <Link href="/payments/dues" className="inline-flex min-h-11 items-center rounded-control border border-border px-4 text-sm font-semibold hover:bg-canvas">View dues</Link>
+      </div>
+    </Card>
+  );
+}
+
+function ExpensesCard({ canAdd }: { canAdd: boolean }) {
+  const [today, setToday] = useState<ExpenseSummary | null>(null);
+  const [month, setMonth] = useState<ExpenseSummary | null>(null);
+  useEffect(() => {
+    const date = businessToday();
+    api<ExpenseSummary>(`/expenses/summary?from=${date}&to=${date}`).then(setToday).catch(() => setToday(null));
+    api<ExpenseSummary>(`/expenses/monthly/summary?month=${date.slice(0, 7)}`).then(setMonth).catch(() => setMonth(null));
+  }, []);
+  return (
+    <Card className="md:col-span-2">
+      <CardHeader title="Expenses" />
+      <dl className="grid grid-cols-2 gap-3">
+        <div><dt className="text-sm text-ink-muted">Today</dt><dd className="text-xl font-bold">{today ? formatPaise(today.totalPaise) : '–'}</dd></div>
+        <div><dt className="text-sm text-ink-muted">This month</dt><dd className="text-xl font-bold">{month ? formatPaise(month.totalPaise) : '–'}</dd></div>
+      </dl>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {canAdd && <Link href="/expenses?add=1" className="inline-flex min-h-11 items-center rounded-control bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Add expense</Link>}
+        <Link href="/expenses" className="inline-flex min-h-11 items-center rounded-control border border-border px-4 text-sm font-semibold hover:bg-canvas">View expenses</Link>
       </div>
     </Card>
   );
@@ -186,6 +210,8 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-5">
         {can(session.role, Permission.PAYMENT_VIEW) && <PaymentsCard canRecord={can(session.role, Permission.PAYMENT_RECORD)} />}
+        {can(session.role, Permission.EXPENSE_VIEW) && <ExpensesCard canAdd={can(session.role, Permission.EXPENSE_MANAGE)} />}
+        {can(session.role, Permission.FINANCE_VIEW) && <FinanceCard month={businessToday().slice(0, 7)} className="md:col-span-3" title="This month: collected vs spent" />}
         <TomorrowMealsCard />
         <TodayAttendanceCard canScan={can(session.role, Permission.ATTENDANCE_MARK)} />
         <TodayMenuCard />

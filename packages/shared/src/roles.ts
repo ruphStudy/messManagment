@@ -62,6 +62,11 @@ export const Permission = {
   PAYMENT_VIEW: 'payment:view',
   PAYMENT_RECORD: 'payment:record',
   PAYMENT_REVERSE: 'payment:reverse',
+  /** Expenses and the revenue-vs-expense estimate are owner/manager only (staff have no access). */
+  EXPENSE_VIEW: 'expense:view',
+  /** Add, edit, reverse expenses and manage categories. */
+  EXPENSE_MANAGE: 'expense:manage',
+  FINANCE_VIEW: 'finance:view',
   STUDENT_SELF: 'student:self',
 } as const;
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -92,6 +97,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.PAYMENT_VIEW,
     Permission.PAYMENT_RECORD,
     Permission.PAYMENT_REVERSE,
+    Permission.EXPENSE_VIEW,
+    Permission.EXPENSE_MANAGE,
+    Permission.FINANCE_VIEW,
   ],
   MESS_MANAGER: [
     Permission.MESS_VIEW,
@@ -113,6 +121,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.PAYMENT_VIEW,
     Permission.PAYMENT_RECORD,
     Permission.PAYMENT_REVERSE,
+    Permission.EXPENSE_VIEW,
+    Permission.EXPENSE_MANAGE,
+    Permission.FINANCE_VIEW,
   ],
   MESS_STAFF: [
     Permission.MESS_VIEW,

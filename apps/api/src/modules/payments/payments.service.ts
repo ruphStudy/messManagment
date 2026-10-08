@@ -20,7 +20,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { lockStudent } from '../../common/db/student-lock';
 import { AppException } from '../../common/http/app.exception';
-import { fromDateString, toDateString } from '../../common/http/dates';
+import { fromDateString, monthRange, toDateString } from '../../common/http/dates';
 import { Paginated, PaginationQueryDto } from '../../common/http/pagination';
 import { StudentsService } from '../students/students.service';
 import { studentSearchTerms } from '../students/student-search';
@@ -206,7 +206,7 @@ export class PaymentsService {
    * Not an invoice — a subscription spanning two months appears in both months.
    */
   async monthlySummary(messId: string, month: string): Promise<MonthlyPaymentStatus> {
-    const { start, end } = this.monthRange(month);
+    const { start, end } = monthRange(month);
     const [totals] = await this.prisma.$queryRaw<{ paid: number; partial: number; unpaid: number; expected: bigint | null; collected: bigint | null }[]>`
       SELECT
         count(*) FILTER (WHERE "amountPaidPaise" >= "planPricePaise")::int AS paid,
@@ -229,7 +229,7 @@ export class PaymentsService {
   }
 
   async monthlyList(messId: string, query: MonthlyStatusQueryDto) {
-    const { start, end } = this.monthRange(query.month);
+    const { start, end } = monthRange(query.month);
     const statusFilter: Record<SubscriptionPaymentStatus, Prisma.StudentSubscriptionWhereInput> = {
       PAID: { amountPaidPaise: { gte: this.priceRef } },
       PARTIAL: { amountPaidPaise: { gt: 0, lt: this.priceRef } },
@@ -314,10 +314,6 @@ export class PaymentsService {
     return this.receipt(student.messId, id, student.id);
   }
 
-  private monthRange(month: string) {
-    const [y, m] = month.split('-').map(Number);
-    return { start: `${month}-01`, end: toDateString(new Date(Date.UTC(y, m, 0))) };
-  }
 
   private async dueItems(
     where: Prisma.StudentSubscriptionWhereInput,

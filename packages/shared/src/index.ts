@@ -9,3 +9,4 @@ export * from './menus';
 export * from './attendance';
 export * from './pauses';
 export * from './payments';
+export * from './expenses';

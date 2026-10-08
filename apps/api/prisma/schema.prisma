@@ -92,6 +92,11 @@ enum PaymentStatus {
   REVERSED
 }
 
+enum ExpenseStatus {
+  RECORDED
+  REVERSED
+}
+
 enum MessType {
   STUDENT_MESS
   PG_HOSTEL
@@ -129,6 +134,8 @@ model User {
   memberships      MessMembership[]
   sessions         Session[]
   studentProfiles  MessStudent[]
+  recordedExpenses Expense[]        @relation("ExpenseRecordedBy")
+  reversedExpenses Expense[]        @relation("ExpenseReversedBy")
   recordedPayments Payment[]        @relation("PaymentRecordedBy")
   reversedPayments Payment[]        @relation("PaymentReversedBy")
   servedMeals      MealAttendance[] @relation("ServedBy")
@@ -169,15 +176,17 @@ model Mess {
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
 
-  owner         User                  @relation("MessOwner", fields: [ownerId], references: [id])
-  memberships   MessMembership[]
-  students      MessStudent[]
-  mealPlans     MealPlan[]
-  subscriptions StudentSubscription[]
-  menus         DailyMenu[]
-  attendance    MealAttendance[]
-  pauses        MealPause[]
-  payments      Payment[]
+  owner             User                  @relation("MessOwner", fields: [ownerId], references: [id])
+  memberships       MessMembership[]
+  students          MessStudent[]
+  mealPlans         MealPlan[]
+  subscriptions     StudentSubscription[]
+  menus             DailyMenu[]
+  attendance        MealAttendance[]
+  pauses            MealPause[]
+  payments          Payment[]
+  expenseCategories ExpenseCategory[]
+  expenses          Expense[]
 
   @@index([ownerId])
   @@map("messes")
@@ -477,4 +486,53 @@ model Payment {
   @@index([studentId, paymentDate])
   @@index([subscriptionId])
   @@map("payments")
+}
+
+/// Per-mess expense category. Defaults are created on first use; never deleted (deactivate instead).
+model ExpenseCategory {
+  id             String   @id @default(uuid()) @db.Uuid
+  messId         String   @db.Uuid
+  name           String   @db.VarChar(40)
+  /// lower(trim(name)) — makes names unique per mess regardless of case.
+  normalizedName String   @db.VarChar(40)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  mess     Mess      @relation(fields: [messId], references: [id], onDelete: Cascade)
+  expenses Expense[]
+
+  @@unique([messId, normalizedName])
+  @@map("expense_categories")
+}
+
+/// Money spent by the mess. Separate from student payments; mistakes are reversed, never deleted.
+model Expense {
+  id              String         @id @default(uuid()) @db.Uuid
+  messId          String         @db.Uuid
+  categoryId      String         @db.Uuid
+  title           String         @db.VarChar(80)
+  amountPaise     Int
+  expenseDate     DateTime       @db.Date
+  paymentMethod   PaymentMethod?
+  vendorName      String?        @db.VarChar(80)
+  referenceNumber String?        @db.VarChar(60)
+  note            String?        @db.VarChar(200)
+  status          ExpenseStatus  @default(RECORDED)
+  recordedById    String?        @db.Uuid
+  reversedAt      DateTime?
+  reversedById    String?        @db.Uuid
+  reversalReason  String?        @db.VarChar(200)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  mess       Mess            @relation(fields: [messId], references: [id], onDelete: Cascade)
+  category   ExpenseCategory @relation(fields: [categoryId], references: [id])
+  recordedBy User?           @relation("ExpenseRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
+  reversedBy User?           @relation("ExpenseReversedBy", fields: [reversedById], references: [id], onDelete: SetNull)
+
+  @@index([messId, expenseDate])
+  @@index([messId, categoryId, expenseDate])
+  @@index([messId, status, expenseDate])
+  @@map("expenses")
 }
