@@ -6,3 +6,4 @@ export * from './api';
 export * from './students';
 export * from './meal-plans';
 export * from './menus';
+export * from './attendance';

@@ -53,6 +53,23 @@ enum SubscriptionKind {
   PLAN_CHANGE
 }
 
+/// Same values as the shared MealKey.
+enum MealType {
+  breakfast
+  lunch
+  dinner
+}
+
+enum AttendanceSource {
+  QR
+  MANUAL
+}
+
+enum AttendanceStatus {
+  SERVED
+  REVERSED
+}
+
 enum MessType {
   STUDENT_MESS
   PG_HOSTEL
@@ -90,6 +107,8 @@ model User {
   memberships     MessMembership[]
   sessions        Session[]
   studentProfiles MessStudent[]
+  servedMeals     MealAttendance[] @relation("ServedBy")
+  reversedMeals   MealAttendance[] @relation("ReversedBy")
 
   @@map("users")
 }
@@ -124,6 +143,7 @@ model Mess {
   mealPlans     MealPlan[]
   subscriptions StudentSubscription[]
   menus         DailyMenu[]
+  attendance    MealAttendance[]
 
   @@index([ownerId])
   @@map("messes")
@@ -211,9 +231,10 @@ model MessStudent {
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
 
-  mess          Mess                  @relation(fields: [messId], references: [id], onDelete: Cascade)
-  user          User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
-  subscriptions StudentSubscription[]
+  mess            Mess                  @relation(fields: [messId], references: [id], onDelete: Cascade)
+  user            User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+  subscriptions   StudentSubscription[]
+  mealAttendances MealAttendance[]
 
   /// One record per person per mess (archived records are restored, not duplicated).
   @@unique([messId, mobile])
@@ -271,9 +292,10 @@ model StudentSubscription {
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 
-  mess     Mess        @relation(fields: [messId], references: [id], onDelete: Cascade)
-  student  MessStudent @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  mealPlan MealPlan?   @relation(fields: [mealPlanId], references: [id], onDelete: SetNull)
+  mess       Mess             @relation(fields: [messId], references: [id], onDelete: Cascade)
+  student    MessStudent      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  mealPlan   MealPlan?        @relation(fields: [mealPlanId], references: [id], onDelete: SetNull)
+  attendance MealAttendance[]
 
   @@index([messId, endDate])
   @@index([messId, startDate])
@@ -307,4 +329,40 @@ model DailyMenu {
   @@unique([messId, menuDate])
   @@index([messId, isPublished, menuDate])
   @@map("daily_menus")
+}
+
+/// One served meal. Source of truth for consumption; never deleted (reversal keeps the row).
+model MealAttendance {
+  id             String           @id @default(uuid()) @db.Uuid
+  messId         String           @db.Uuid
+  studentId      String           @db.Uuid
+  subscriptionId String           @db.Uuid
+  attendanceDate DateTime         @db.Date
+  mealType       MealType
+  source         AttendanceSource
+  status         AttendanceStatus @default(SERVED)
+  /// true while SERVED, NULL once reversed. Part of the unique key below, so at most one served row per
+  /// student/date/meal can exist (NULLs are distinct), while reversed rows stay as history.
+  servedMarker   Boolean?         @default(true)
+  /// Whether this attendance used one meal credit (limited plans). Reversal restores it only if true.
+  creditDeducted Boolean          @default(false)
+  servedById     String?          @db.Uuid
+  note           String?          @db.VarChar(200)
+  reversedAt     DateTime?
+  reversedById   String?          @db.Uuid
+  reversalReason String?          @db.VarChar(200)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  mess         Mess                @relation(fields: [messId], references: [id], onDelete: Cascade)
+  student      MessStudent         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subscription StudentSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  servedBy     User?               @relation("ServedBy", fields: [servedById], references: [id], onDelete: SetNull)
+  reversedBy   User?               @relation("ReversedBy", fields: [reversedById], references: [id], onDelete: SetNull)
+
+  @@unique([messId, studentId, attendanceDate, mealType, servedMarker])
+  @@index([messId, attendanceDate, mealType])
+  @@index([studentId, attendanceDate])
+  @@index([subscriptionId])
+  @@map("meal_attendance")
 }

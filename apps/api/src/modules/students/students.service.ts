@@ -2,7 +2,6 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { Prisma, type User } from '@prisma/client';
 import {
   ErrorCode,
-  normalizeMobile,
   StudentStatus,
   type StudentDetail,
   type StudentListItem,
@@ -15,6 +14,7 @@ import { AppException } from '../../common/http/app.exception';
 import { Paginated } from '../../common/http/pagination';
 import { CreateStudentDto, ListStudentsQueryDto, UpdateStudentDto, UpdateStudentSelfDto } from './dto/student.dto';
 import { StudentLinkService } from './student-link.service';
+import { studentSearchTerms } from './student-search';
 import { fromDateString } from '../../common/http/dates';
 import {
   studentListSelect,
@@ -42,7 +42,7 @@ export class StudentsService {
     const where: Prisma.MessStudentWhereInput = {
       messId,
       status: query.status ?? NOT_ARCHIVED,
-      AND: this.searchTerms(query.search),
+      AND: studentSearchTerms(query.search, ['firstName', 'lastName', 'email', 'collegeName', 'hostelOrPg']),
     };
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.messStudent.findMany({
@@ -189,29 +189,6 @@ export class StudentsService {
     const exists = await this.prisma.messStudent.count({ where: { id, messId } });
     if (!exists) throw this.notFound();
     throw this.archivedConflict(archivedMessage);
-  }
-
-  /** Each word must match at least one searchable field (so "raj pune" narrows results). */
-  private searchTerms(search?: string): Prisma.MessStudentWhereInput[] {
-    if (!search) return [];
-    return search
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 5)
-      .map((term) => {
-        const contains = { contains: term, mode: 'insensitive' as const };
-        const digits = normalizeMobile(term) ?? term.replace(/\D/g, '');
-        return {
-          OR: [
-            { firstName: contains },
-            { lastName: contains },
-            { email: contains },
-            { collegeName: contains },
-            { hostelOrPg: contains },
-            ...(digits.length >= 3 ? [{ mobile: { contains: digits } }] : []),
-          ],
-        };
-      });
   }
 
   private orderBy({ sortBy, sortOrder }: ListStudentsQueryDto): Prisma.MessStudentOrderByWithRelationInput[] {

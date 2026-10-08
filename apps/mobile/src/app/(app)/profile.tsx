@@ -121,6 +121,7 @@ export default function ProfileScreen() {
       )}
 
       {profile && !editing && <Button title="Plan history" variant="secondary" onPress={() => router.push('/plans')} />}
+      {profile && !editing && <Button title="Meal history" variant="secondary" onPress={() => router.push('/attendance')} />}
       {!editing && <Button title="Sign out" variant="secondary" onPress={confirmLogout} loading={loggingOut} />}
     </Screen>
   );

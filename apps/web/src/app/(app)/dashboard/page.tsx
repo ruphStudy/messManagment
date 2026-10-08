@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, Circle } from 'lucide-react';
-import { addDays, businessToday, MEAL_KEYS, startOfWeek, MEAL_LABELS, Role, type MealPlan, type MenuDay } from '@mess/shared';
+import { addDays, businessToday, can, MEAL_KEYS, MEAL_LABELS, Permission, Role, startOfWeek, type AttendanceSummary, type MealPlan, type MenuDay } from '@mess/shared';
 import { MenuStatusBadge } from '@/components/menu/menu-status-badge';
 import { mealSummary } from '@/lib/menu';
 import { api, apiEnvelope } from '@/lib/api';
@@ -36,6 +36,30 @@ function useSetupCounts() {
       .catch(() => setCounts(null));
   }, []);
   return counts;
+}
+
+function TodayAttendanceCard({ canScan }: { canScan: boolean }) {
+  const [summary, setSummary] = useState<AttendanceSummary | null>(null);
+  useEffect(() => {
+    api<AttendanceSummary>('/attendance/summary').then(setSummary).catch(() => setSummary(null));
+  }, []);
+  return (
+    <Card className="md:col-span-5">
+      <CardHeader
+        title="Meals served today"
+        action={canScan && <Link href="/attendance/scan" className="inline-flex min-h-11 items-center rounded-control bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Scan QR</Link>}
+      />
+      <dl className="grid grid-cols-3 gap-3">
+        {MEAL_KEYS.map((key) => (
+          <div key={key}>
+            <dt className="text-sm text-ink-muted">{MEAL_LABELS[key]}</dt>
+            <dd className="text-2xl font-bold">{summary ? summary[key] : '–'}</dd>
+          </div>
+        ))}
+      </dl>
+      <Link href="/attendance" className="mt-3 inline-flex min-h-11 items-center font-semibold text-brand-700 hover:underline">View attendance →</Link>
+    </Card>
+  );
 }
 
 function TodayMenuCard() {
@@ -101,6 +125,7 @@ export default function DashboardPage() {
       <PageHeader title={`Welcome, ${session.user.firstName}!`} description={session.membership.mess.name} />
 
       <div className="grid gap-4 md:grid-cols-5">
+        <TodayAttendanceCard canScan={can(session.role, Permission.ATTENDANCE_MARK)} />
         <TodayMenuCard />
         <Card className="md:col-span-3">
           <CardHeader

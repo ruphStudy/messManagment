@@ -51,6 +51,11 @@ export const Permission = {
   MENU_VIEW: 'menu:view',
   /** Create, edit, copy, publish/unpublish menus. */
   MENU_MANAGE: 'menu:manage',
+  ATTENDANCE_VIEW: 'attendance:view',
+  /** Scan QR and mark attendance manually. */
+  ATTENDANCE_MARK: 'attendance:mark',
+  /** Reverse a served meal (restores the credit). */
+  ATTENDANCE_REVERSE: 'attendance:reverse',
   STUDENT_SELF: 'student:self',
 } as const;
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -73,6 +78,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.SUBSCRIPTION_CANCEL,
     Permission.MENU_VIEW,
     Permission.MENU_MANAGE,
+    Permission.ATTENDANCE_VIEW,
+    Permission.ATTENDANCE_MARK,
+    Permission.ATTENDANCE_REVERSE,
   ],
   MESS_MANAGER: [
     Permission.MESS_VIEW,
@@ -86,6 +94,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.SUBSCRIPTION_MANAGE,
     Permission.MENU_VIEW,
     Permission.MENU_MANAGE,
+    Permission.ATTENDANCE_VIEW,
+    Permission.ATTENDANCE_MARK,
+    Permission.ATTENDANCE_REVERSE,
   ],
   MESS_STAFF: [
     Permission.MESS_VIEW,
@@ -93,6 +104,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     Permission.MEAL_PLAN_VIEW,
     Permission.SUBSCRIPTION_VIEW,
     Permission.MENU_VIEW,
+    Permission.ATTENDANCE_VIEW,
+    Permission.ATTENDANCE_MARK,
   ],
   STUDENT: [Permission.STUDENT_SELF],
 };

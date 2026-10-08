@@ -10,7 +10,7 @@ type IconName = ComponentProps<typeof Ionicons>['name'];
 const TABS: { name: string; title: string; icon: IconName }[] = [
   { name: 'index', title: 'Home', icon: 'home-outline' },
   { name: 'menu', title: 'Menu', icon: 'restaurant-outline' },
-  { name: 'qr', title: 'QR', icon: 'qr-code-outline' },
+  { name: 'qr', title: 'Meal QR', icon: 'qr-code-outline' },
   { name: 'pause', title: 'Pause', icon: 'pause-circle-outline' },
   { name: 'payments', title: 'Payments', icon: 'wallet-outline' },
   { name: 'profile', title: 'Profile', icon: 'person-circle-outline' },
@@ -36,19 +36,25 @@ export default function AppTabsLayout() {
           options={{ title, tabBarIcon: ({ color, size }) => <Ionicons name={icon} color={color} size={size} /> }}
         />
       ))}
-      {/* Not a tab: opened from Home / Profile. */}
-      <Tabs.Screen
-        name="plans"
-        options={{
-          href: null,
-          title: 'Plan history',
-          headerLeft: () => (
-            <Pressable onPress={() => router.back()} accessibilityLabel="Back" hitSlop={12} style={{ paddingHorizontal: 16 }}>
-              <Ionicons name="arrow-back" size={24} color={colors.ink} />
-            </Pressable>
-          ),
-        }}
-      />
+      {/* Not tabs: opened from Home / QR / Profile. */}
+      {[
+        { name: 'plans', title: 'Plan history' },
+        { name: 'attendance', title: 'Meal history' },
+      ].map(({ name, title }) => (
+        <Tabs.Screen
+          key={name}
+          name={name}
+          options={{
+            href: null,
+            title,
+            headerLeft: () => (
+              <Pressable onPress={() => router.back()} accessibilityLabel="Back" hitSlop={12} style={{ paddingHorizontal: 16 }}>
+                <Ionicons name="arrow-back" size={24} color={colors.ink} />
+              </Pressable>
+            ),
+          }}
+        />
+      ))}
     </Tabs>
     </StudentProfileProvider>
   );

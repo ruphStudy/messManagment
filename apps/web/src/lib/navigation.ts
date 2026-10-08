@@ -31,7 +31,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Meal Plans', href: '/meal-plans', icon: ClipboardList, permission: Permission.MEAL_PLAN_VIEW },
   { label: 'Subscriptions', href: '/subscriptions', icon: Repeat, permission: Permission.SUBSCRIPTION_VIEW },
   { label: 'Menu', href: '/menu', icon: UtensilsCrossed, permission: Permission.MENU_VIEW },
-  { label: 'Attendance', href: '/attendance', icon: CalendarCheck, soon: true },
+  { label: 'Attendance', href: '/attendance', icon: CalendarCheck, permission: Permission.ATTENDANCE_VIEW },
   { label: 'Meal Pause', href: '/meal-pause', icon: PauseCircle, soon: true },
   { label: 'Payments', href: '/payments', icon: CreditCard, soon: true },
   { label: 'Expenses', href: '/expenses', icon: Wallet, soon: true },

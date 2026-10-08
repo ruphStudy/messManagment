@@ -5,7 +5,6 @@ import {
   businessToday,
   calculateEndDate,
   ErrorCode,
-  normalizeMobile,
   PlanChangeMode,
   StudentStatus,
   SubscriptionKind,
@@ -17,11 +16,13 @@ import {
   type SubscriptionSummary,
 } from '@mess/shared';
 import { PrismaService } from '../../prisma/prisma.service';
+import { lockStudent } from '../../common/db/student-lock';
 import { AppException } from '../../common/http/app.exception';
 import { fromDateString, toDateString } from '../../common/http/dates';
 import { Paginated, PaginationQueryDto } from '../../common/http/pagination';
 import { MealPlansService } from '../meal-plans/meal-plans.service';
 import { StudentsService } from '../students/students.service';
+import { studentSearchTerms } from '../students/student-search';
 import { AssignSubscriptionDto, ChangePlanDto, ListSubscriptionsQueryDto, RenewSubscriptionDto } from './dto/subscription.dto';
 import { expiringSoonWhere, overlapWhere, statusWhere } from './subscription.rules';
 import {
@@ -68,7 +69,7 @@ export class SubscriptionsService {
       mealPlanId: query.mealPlanId,
       studentId: query.studentId,
       ...(query.expiringSoon ? expiringSoonWhere(today) : query.status ? statusWhere(query.status, today) : {}),
-      ...(query.search ? { student: { AND: this.studentSearch(query.search) } } : {}),
+      ...(query.search ? { student: { AND: studentSearchTerms(query.search) } } : {}),
     };
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.studentSubscription.findMany({
@@ -219,7 +220,7 @@ export class SubscriptionsService {
   /** Serializes subscription writes per student so two requests cannot both pass the overlap check. */
   private inStudentLock<T>(studentId: string, work: (tx: Tx) => Promise<T>): Promise<T> {
     return this.prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${studentId}))`;
+      await lockStudent(tx, studentId);
       return work(tx);
     });
   }
@@ -291,20 +292,6 @@ export class SubscriptionsService {
     const row = await this.prisma.studentSubscription.findFirst({ where: { id, messId } });
     if (!row) throw this.notFound();
     return row;
-  }
-
-  private studentSearch(search: string): Prisma.MessStudentWhereInput[] {
-    return search
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 5)
-      .map((term) => {
-        const contains = { contains: term, mode: 'insensitive' as const };
-        const digits = normalizeMobile(term) ?? term.replace(/\D/g, '');
-        return {
-          OR: [{ firstName: contains }, { lastName: contains }, ...(digits.length >= 3 ? [{ mobile: { contains: digits } }] : [])],
-        };
-      });
   }
 
   private orderBy(query: ListSubscriptionsQueryDto): Prisma.StudentSubscriptionOrderByWithRelationInput[] {
