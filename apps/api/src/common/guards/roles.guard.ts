@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { can, ErrorCode, Permission, Role } from '@mess/shared';
 import { PERMISSIONS_KEY, REQUIRE_MESS_KEY, ROLES_KEY } from '../decorators/auth.decorators';
 import { AuthContextService } from '../../modules/auth/auth-context.service';
+import { BillingService } from '../../modules/billing/billing.service';
 import { AppException } from '../http/app.exception';
 import type { AuthedRequest } from '../auth.types';
 
@@ -19,6 +20,7 @@ export class RolesGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly authContext: AuthContextService,
+    private readonly billing: BillingService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -38,6 +40,10 @@ export class RolesGuard implements CanActivate {
     if (requireMess) {
       if (!auth.membership) throw AppException.forbidden('Set up your mess first', ErrorCode.MESS_REQUIRED);
       if (auth.membership.mess.status !== 'ACTIVE' && isWrite) throw messSuspended();
+      // MessMate (SaaS) access: reads, auth, account, billing view and student self-service stay open.
+      if (isWrite && !(await this.billing.accessAllowed(auth.membership.messId))) {
+        throw AppException.forbidden('Your MessMate subscription is not active. Records can be viewed; contact support to activate or renew.', ErrorCode.PLATFORM_SUBSCRIPTION_REQUIRED);
+      }
     }
     // Student self-service writes (pauses, feedback, complaints, uploads, profile) belong to the student's mess.
     if (isWrite && auth.role === Role.STUDENT && roles?.includes(Role.STUDENT) && (await this.authContext.studentMessSuspended(auth.user.id))) {

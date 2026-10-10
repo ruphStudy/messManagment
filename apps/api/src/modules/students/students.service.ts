@@ -10,6 +10,8 @@ import {
   type ToggleableStudentStatus,
 } from '@mess/shared';
 import { PrismaService } from '../../prisma/prisma.service';
+import { selectedStudentMessId } from '../../common/http/student-mess-context';
+import { pickStudentRecord } from './student-selection';
 import { AppException } from '../../common/http/app.exception';
 import { Paginated } from '../../common/http/pagination';
 import { CreateStudentDto, ListStudentsQueryDto, UpdateStudentDto, UpdateStudentSelfDto } from './dto/student.dto';
@@ -162,13 +164,17 @@ export class StudentsService {
     return toStudentSelfProfile(student);
   }
 
-  /** Active record first, then inactive; most recent joining wins if the student is in several messes. */
-  private findSelf(userId: string) {
-    return this.prisma.messStudent.findFirst({
+  /**
+   * The student's record in the selected mess (x-mess-id), verified to belong to this user; without a selection
+   * the only usable one (see pickStudentRecord). A student may be in several messes at once.
+   */
+  private async findSelf(userId: string) {
+    const records = await this.prisma.messStudent.findMany({
       where: { userId, status: NOT_ARCHIVED },
       orderBy: [{ status: 'asc' }, { joiningDate: 'desc' }],
       include: selfInclude,
     });
+    return pickStudentRecord(records, selectedStudentMessId());
   }
 
   private async assertMobileAvailable(messId: string, mobile: string) {

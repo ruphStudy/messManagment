@@ -8,6 +8,7 @@ const WEB_ROUTES: Record<string, string> = {
   menu: '/menu',
   pause: '/pauses',
   home: '/dashboard',
+  plans: '/meal-plans',
 };
 
 export function notificationHref(data: NotificationData | null): string | null {

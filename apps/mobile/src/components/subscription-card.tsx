@@ -2,16 +2,16 @@ import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { daysBetween, SUBSCRIPTION_STATUS_LABELS, SubscriptionStatus, type SubscriptionSummary } from '@mess/shared';
 import { formatDate } from '@/lib/student-profile';
-import { colors, radius, spacing } from '@/theme/tokens';
+import { colors, radius, spacing, themed } from '@/theme/tokens';
 import { Card } from './layout';
 import { AppText } from './text';
 
-const STATUS_COLORS: Record<SubscriptionStatus, { bg: string; fg: string }> = {
+const STATUS_COLORS: Record<SubscriptionStatus, { bg: string; fg: string }> = themed(() => ({
   ACTIVE: { bg: colors.successSoft, fg: colors.success },
   UPCOMING: { bg: colors.infoSoft, fg: colors.info },
   EXPIRED: { bg: colors.canvas, fg: colors.inkMuted },
   CANCELLED: { bg: colors.dangerSoft, fg: colors.danger },
-};
+}));
 
 export function StatusPill({ status }: { status: SubscriptionStatus }) {
   const c = STATUS_COLORS[status];
@@ -80,7 +80,7 @@ export function SubscriptionCard({ sub }: { sub: SubscriptionSummary }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   flex: { flex: 1 },
   pill: { borderRadius: radius.pill, paddingHorizontal: spacing.sm + 2, paddingVertical: 2 },
@@ -89,4 +89,4 @@ const styles = StyleSheet.create({
   progressRow: { flexDirection: 'row', justifyContent: 'space-between' },
   track: { height: 8, borderRadius: 4, backgroundColor: colors.brand100, overflow: 'hidden' },
   fill: { height: '100%', backgroundColor: colors.brand600, borderRadius: 4 },
-});
+}));

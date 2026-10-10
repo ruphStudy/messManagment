@@ -7,6 +7,7 @@ import helmet from 'helmet';
 import { API_PREFIX } from '@mess/shared';
 import { AppModule } from './app.module';
 import { createValidationPipe } from './common/http/validation';
+import { studentMessContextMiddleware } from './common/http/student-mess-context';
 import { APP_CONFIG, AppConfig } from './config/app-config';
 
 async function bootstrap() {
@@ -16,6 +17,8 @@ async function bootstrap() {
   app.set('trust proxy', 1);
   app.use(helmet());
   app.use(cookieParser());
+  // Student multi-mess: x-mess-id selection for the rest of the request (verified per request).
+  app.use(studentMessContextMiddleware);
   app.enableCors({ origin: config.corsOrigins, credentials: true });
   app.setGlobalPrefix(API_PREFIX.slice(1));
   app.useGlobalPipes(createValidationPipe());

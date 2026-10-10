@@ -16,7 +16,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { ErrorState } from '@/components/ui/states';
 import { api, errorMessage } from '@/lib/api';
 import { MESS_STATUS_UI, USER_STATUS_UI } from '@/lib/admin';
-import { formatDate, formatDateTime } from '@/lib/format';
+import { formatDate, formatTimestampDate, formatDateTime } from '@/lib/format';
 
 export default function AdminUserDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -43,7 +43,7 @@ export default function AdminUserDetailPage() {
       <Link href="/admin/users" className="mb-2 inline-flex min-h-9 items-center gap-1 text-sm font-medium text-brand-700 hover:underline"><ArrowLeft className="size-4" aria-hidden /> All users</Link>
       <PageHeader
         title={name}
-        description={`${ROLE_LABELS[user.role]} · joined ${formatDate(user.createdAt)}`}
+        description={`${ROLE_LABELS[user.role]} · joined ${formatTimestampDate(user.createdAt)}`}
         actions={
           data.canChangeStatus &&
           (suspended ? <Button onClick={() => setDialog('reactivate')}>Reactivate account</Button> : <Button variant="danger" onClick={() => setDialog('suspend')}>Suspend account</Button>)
@@ -80,7 +80,7 @@ export default function AdminUserDetailPage() {
             <ul className="flex flex-col gap-2 text-sm">
               {data.memberships.map((m) => (
                 <li key={`m-${m.messId}`}>
-                  {messLink(m.messId, m.messName)} · {ROLE_LABELS[m.role]}{m.status !== 'ACTIVE' && ' (removed)'} · since {formatDate(m.since)}{' '}
+                  {messLink(m.messId, m.messName)} · {ROLE_LABELS[m.role]}{m.status !== 'ACTIVE' && ' (removed)'} · since {formatTimestampDate(m.since)}{' '}
                   {m.messStatus !== 'ACTIVE' && <Badge tone={MESS_STATUS_UI[m.messStatus].tone}>{MESS_STATUS_UI[m.messStatus].label}</Badge>}
                 </li>
               ))}

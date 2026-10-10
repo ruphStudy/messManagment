@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ChevronRight, Users } from 'lucide-react';
 import { can, MessStatus, Permission, type MessProfile } from '@mess/shared';
 import { AccountSettings } from '@/components/settings/account-settings';
+import { BillingSummaryCard } from '@/components/settings/billing-summary';
 import { MealSettingsForm, MessProfileForm } from '@/components/settings/mess-settings-forms';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -16,8 +17,8 @@ import { useAuth } from '@/lib/auth/auth-context';
 import { cn } from '@/lib/cn';
 import { useListParams } from '@/lib/use-list-params';
 
-type Tab = 'profile' | 'meals' | 'staff' | 'account';
-const TAB_LABELS: Record<Tab, string> = { profile: 'Mess profile', meals: 'Meals & timings', staff: 'Staff & access', account: 'Account & security' };
+type Tab = 'profile' | 'meals' | 'staff' | 'billing' | 'account';
+const TAB_LABELS: Record<Tab, string> = { profile: 'Mess profile', meals: 'Meals & timings', staff: 'Staff & access', billing: 'Billing & Subscription', account: 'Account & security' };
 
 function SettingsSkeleton() {
   return (
@@ -62,6 +63,7 @@ function SettingsScreen() {
   const tabs: Tab[] = [
     ...(can(session?.role, Permission.MESS_SETTINGS_UPDATE) ? (['profile', 'meals'] as const) : []),
     ...(can(session?.role, Permission.STAFF_VIEW) ? (['staff'] as const) : []),
+    ...(can(session?.role, Permission.MESS_SETTINGS_UPDATE) ? (['billing'] as const) : []),
     'account',
   ];
   const requested = list.get('tab') as Tab;
@@ -77,7 +79,7 @@ function SettingsScreen() {
               key={t}
               href={`/settings?tab=${t}`}
               aria-current={tab === t ? 'page' : undefined}
-              className={cn('inline-flex min-h-10 shrink-0 items-center rounded-full px-4 text-sm font-semibold', tab === t ? 'bg-ink text-white' : 'border border-border bg-surface text-ink-muted hover:bg-canvas')}
+              className={cn('inline-flex min-h-10 shrink-0 items-center rounded-full px-4 text-sm font-semibold', tab === t ? 'bg-ink text-white dark:text-canvas' : 'border border-border bg-surface text-ink-muted hover:bg-canvas')}
             >
               {TAB_LABELS[t]}
             </Link>
@@ -95,6 +97,8 @@ function SettingsScreen() {
           </span>
           <ChevronRight className="size-5 text-ink-muted" aria-hidden />
         </Link>
+      ) : tab === 'billing' ? (
+        <BillingSummaryCard />
       ) : (
         <AccountSettings />
       )}

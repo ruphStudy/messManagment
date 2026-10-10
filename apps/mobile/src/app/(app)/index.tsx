@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { formatPaise, MEAL_LABELS, STUDENT_STATUS_LABELS, StudentStatus, type EligibleMeal } from '@mess/shared';
+import { Button } from '@/components/button';
 import { Card, Screen } from '@/components/layout';
 import { NotLinkedCard } from '@/components/not-linked';
 import { ErrorState, FullScreenLoader } from '@/components/states';
@@ -17,7 +18,7 @@ import { api } from '@/lib/api';
 import { useFees } from '@/lib/use-fees';
 import { usePauseSettings } from '@/lib/use-pause-settings';
 import { useStudentMenu } from '@/lib/use-student-menu';
-import { colors, spacing, TOUCH_TARGET } from '@/theme/tokens';
+import { colors, spacing, TOUCH_TARGET, themed } from '@/theme/tokens';
 
 function PlanSection({ data, error, reload }: Pick<ReturnType<typeof useMySubscription>, 'data' | 'error' | 'reload'>) {
   if (error) return <ErrorState title="Couldn't load your plan" description={error} onRetry={reload} />;
@@ -38,11 +39,12 @@ function PlanSection({ data, error, reload }: Pick<ReturnType<typeof useMySubscr
             <Ionicons name="restaurant-outline" size={24} color={colors.brand600} />
             <AppText variant="title" style={styles.flex}>No meal plan yet</AppText>
           </View>
-          <AppText muted>Your mess has not assigned a meal plan yet.</AppText>
+          <AppText muted>Choose one of your mess&apos;s plans, or ask your mess to assign one.</AppText>
+          <Button title="Choose a plan" onPress={() => router.push('/plans')} />
         </Card>
       )}
       <Pressable onPress={() => router.push('/plans')} style={styles.link} accessibilityRole="button">
-        <AppText style={{ color: colors.brand700, fontWeight: '600' }}>View plan history</AppText>
+        <AppText style={{ color: colors.brand700, fontWeight: '600' }}>Plans & history</AppText>
         <Ionicons name="chevron-forward" size={18} color={colors.brand700} />
       </Pressable>
     </View>
@@ -89,6 +91,14 @@ export default function HomeScreen() {
 
       {profile ? (
         <>
+          {profile.mess.status === 'SUSPENDED' && (
+            <Card style={{ backgroundColor: colors.dangerSoft, borderColor: colors.dangerSoft }}>
+              <AppText style={{ color: colors.danger, fontWeight: '600' }}>Mess temporarily unavailable</AppText>
+              <AppText style={{ color: colors.danger }}>
+                {profile.mess.name} is paused for now. You can see your history, but meal QR, pauses, feedback and complaints are unavailable.
+              </AppText>
+            </Card>
+          )}
           {profile.status === StudentStatus.INACTIVE && (
             <Card style={{ backgroundColor: colors.dangerSoft, borderColor: colors.dangerSoft }}>
               <AppText style={{ color: colors.danger }}>
@@ -123,10 +133,10 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   greeting: { gap: spacing.xs, marginBottom: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   flex: { flex: 1 },
   feeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: TOUCH_TARGET, paddingHorizontal: spacing.lg, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   link: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, minHeight: TOUCH_TARGET },
-});
+}));

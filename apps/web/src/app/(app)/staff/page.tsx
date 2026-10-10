@@ -13,12 +13,13 @@ import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/states';
 import { useAuth } from '@/lib/auth/auth-context';
 import { RequireAuth } from '@/lib/auth/guards';
-import { formatDate, fullName } from '@/lib/format';
+import { formatTimestampDate, fullName } from '@/lib/format';
 import { useListParams } from '@/lib/use-list-params';
 import { usePagedList } from '@/lib/use-paged-list';
+import { PersonName } from '@/components/ui/avatar';
 
 const FILTERS = ['role', 'status'];
-const addLink = 'inline-flex min-h-11 items-center gap-2 rounded-control bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700';
+const addLink = 'inline-flex min-h-11 items-center gap-2 rounded-control bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 dark:hover:bg-brand-500';
 
 function StaffScreen() {
   const { session } = useAuth();
@@ -50,11 +51,11 @@ function StaffScreen() {
               rowKey={(m) => m.id}
               rowHref={(m) => `/staff/${m.id}`}
               columns={[
-                { header: 'Name', cell: (m) => <>{fullName(m)}{m.isSelf && ' (you)'}</> },
+                { header: 'Name', cell: (m) => <PersonName name={fullName(m)}>{fullName(m)}{m.isSelf && ' (you)'}</PersonName> },
                 { header: 'Mobile / email', cell: (m) => <>{m.mobile}{m.email && <span className="block text-xs text-ink-muted">{m.email}</span>}</> },
                 { header: 'Role', cell: (m) => ROLE_LABELS[m.role] },
                 { header: 'Status', cell: (m) => <Badge tone={m.status === 'ACTIVE' ? 'success' : 'neutral'}>{STAFF_STATUS_LABELS[m.status]}</Badge> },
-                { header: 'Added', cell: (m) => formatDate(m.addedAt), className: 'whitespace-nowrap' },
+                { header: 'Added', cell: (m) => formatTimestampDate(m.addedAt), className: 'whitespace-nowrap' },
               ]}
             />
             {onlyOwner && (

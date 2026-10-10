@@ -1,13 +1,13 @@
 import { StyleSheet, View } from 'react-native';
 import { COMPLAINT_STATUS_LABELS, type ComplaintStatus } from '@mess/shared';
-import { colors, radius, spacing } from '@/theme/tokens';
+import { colors, radius, spacing, themed } from '@/theme/tokens';
 import { AppText } from './text';
 
-const COLORS: Record<ComplaintStatus, { bg: string; fg: string }> = {
+const COLORS: Record<ComplaintStatus, { bg: string; fg: string }> = themed(() => ({
   OPEN: { bg: colors.dangerSoft, fg: colors.danger },
   IN_PROGRESS: { bg: colors.brand100, fg: colors.brand700 },
   RESOLVED: { bg: colors.successSoft, fg: colors.success },
-};
+}));
 
 export function ComplaintStatusPill({ status }: { status: ComplaintStatus }) {
   const c = COLORS[status];

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DEFAULT_SERVING_TIMES, ErrorCode, isTimeRangeInvalid, MESSAGES, MessProfile, Role, servingTimeErrors, type MealServingTimes } from '@mess/shared';
+import { cityStateError, DEFAULT_SERVING_TIMES, findCity, ErrorCode, isTimeRangeInvalid, MESSAGES, MessProfile, Role, servingTimeErrors, type MealServingTimes } from '@mess/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AppException } from '../../common/http/app.exception';
 import type { RequestAuth } from '../../common/auth.types';
@@ -22,10 +22,13 @@ export class MessService {
       throw AppException.conflict('You have already set up a mess', undefined, ErrorCode.MESS_ALREADY_EXISTS);
     }
     this.assertBusinessRules(dto);
+    dto.city = this.assertLocation(dto.state, dto.city);
 
     const mess = await this.prisma.$transaction(async (tx) => {
       const created = await tx.mess.create({ data: { ...dto, ownerId: auth.user.id } });
       await tx.messMembership.create({ data: { userId: auth.user.id, messId: created.id, role: Role.MESS_OWNER } });
+      // New messes need a platform payment (or an admin-granted trial) before mess changes are allowed.
+      await tx.platformSubscription.create({ data: { messId: created.id, status: 'PENDING_PAYMENT', planName: 'MessMate' } });
       return created;
     });
     return toMessProfile(mess);
@@ -41,9 +44,22 @@ export class MessService {
     const current = await this.prisma.mess.findUnique({ where: { id: messId } });
     if (!current) throw AppException.notFound('Mess not found');
     this.assertBusinessRules({ ...current, ...dto });
+    if (dto.city !== undefined || dto.state !== undefined) {
+      dto.city = this.assertLocation(dto.state ?? current.state, dto.city ?? current.city, current);
+    }
 
     const mess = await this.prisma.mess.update({ where: { id: messId }, data: dto });
     return toMessProfile(mess);
+  }
+
+  /**
+   * City must belong to the state (bundled dataset). A mess saved before this rule keeps its old free-text city
+   * while city and state stay unchanged. Returns the city in the dataset's spelling.
+   */
+  private assertLocation(state: string, city: string, saved?: { state: string; city: string }): string {
+    const error = cityStateError(state, city, saved);
+    if (error) throw AppException.validation({ city: [error] });
+    return findCity(state, city) ?? city;
   }
 
   private assertBusinessRules(values: MealAndTimeFields) {

@@ -5,16 +5,27 @@ import * as Notifications from 'expo-notifications';
 import type { NotificationData } from '@mess/shared';
 import { api } from './api';
 import { registerForPush } from './push';
+import { switchStudentMess } from './student-mess';
 
-/** Deep-link targets that exist in this app; anything else simply opens nothing (never a broken route). */
-const ROUTES: Record<string, Href> = { home: '/', payments: '/payments', menu: '/menu', pause: '/pause', plans: '/plans' };
+/** Deep-link targets per area (student tabs vs team screens); unknown targets open nothing (never a broken route). */
+const ROUTES: Record<'student' | 'team', Record<string, Href>> = {
+  student: { home: '/', payments: '/payments', dues: '/payments', menu: '/menu', pause: '/pause', plans: '/plans', subscriptions: '/plans' },
+  team: { home: '/team', payments: '/team/payments', dues: '/team/dues', menu: '/team/menu', pause: '/team/pauses', plans: '/team/students', subscriptions: '/team/students' },
+};
+let currentArea: 'student' | 'team' = 'student';
 
-export function openNotificationTarget(data: NotificationData | null | undefined) {
-  if (data?.screen === 'complaint' && typeof data.complaintId === 'string') {
-    router.push({ pathname: '/complaint', params: { id: data.complaintId } });
+export function openNotificationTarget(data: (NotificationData & { messId?: string }) | null | undefined) {
+  // Student in several messes: a mess-specific notification opens in its own mess (switch first, then navigate).
+  if (currentArea === 'student' && typeof data?.messId === 'string' && switchStudentMess(data.messId)) {
+    const next = { ...data, messId: undefined };
+    setTimeout(() => openNotificationTarget(next), 300);
     return;
   }
-  const route = data?.screen && ROUTES[data.screen];
+  if (data?.screen === 'complaint' && typeof data.complaintId === 'string') {
+    router.push(currentArea === 'team' ? { pathname: '/team/complaint', params: { id: data.complaintId } } : { pathname: '/complaint', params: { id: data.complaintId } });
+    return;
+  }
+  const route = data?.screen && ROUTES[currentArea][data.screen];
   if (route) router.push(route);
 }
 
@@ -27,7 +38,8 @@ interface NotificationsState {
 const Ctx = createContext<NotificationsState | null>(null);
 
 /** Unread badge + push wiring for the signed-in student. Polls only on focus/foreground and when a push arrives. */
-export function NotificationsProvider({ children }: { children: ReactNode }) {
+export function NotificationsProvider({ children, area = 'student' }: { children: ReactNode; area?: 'student' | 'team' }) {
+  currentArea = area;
   const [unread, setUnread] = useState(0);
 
   const refresh = useCallback(async () => {

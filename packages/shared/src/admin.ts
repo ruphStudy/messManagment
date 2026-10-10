@@ -15,6 +15,9 @@ export const AuditAction = {
   USER_SUSPENDED: 'USER_SUSPENDED',
   USER_REACTIVATED: 'USER_REACTIVATED',
   ADMIN_LOGIN: 'ADMIN_LOGIN',
+  BILLING_TRIAL_GRANTED: 'BILLING_TRIAL_GRANTED',
+  BILLING_ACTIVATED: 'BILLING_ACTIVATED',
+  BILLING_STATUS_CHANGED: 'BILLING_STATUS_CHANGED',
 } as const;
 export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];
 
@@ -24,6 +27,9 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   USER_SUSPENDED: 'User suspended',
   USER_REACTIVATED: 'User reactivated',
   ADMIN_LOGIN: 'Admin signed in',
+  BILLING_TRIAL_GRANTED: 'MessMate trial granted',
+  BILLING_ACTIVATED: 'MessMate subscription activated',
+  BILLING_STATUS_CHANGED: 'MessMate subscription status changed',
 };
 
 export const AuditTargetType = { MESS: 'MESS', USER: 'USER' } as const;
@@ -93,6 +99,8 @@ export interface AdminMessListItem {
   createdAt: string;
   owner: { id: string; name: string; mobile: string; email: string | null };
   activeStudents: number;
+  /** Effective MessMate (SaaS) subscription status. */
+  billingStatus: PlatformSubscriptionStatus;
 }
 
 export const ADMIN_MESS_SORT_FIELDS = ['createdAt', 'name', 'city'] as const;
@@ -218,4 +226,98 @@ export interface SystemStatus {
   scheduler: { enabled: boolean };
   storage: { provider: 'local'; warning: string | null };
   notifications: { total: number; pushFailedLast7Days: number; activeDevices: number };
+}
+
+// ── MessMate (SaaS) subscription for a mess — not student meal plans ──
+
+export const PlatformSubscriptionStatus = { PENDING_PAYMENT: 'PENDING_PAYMENT', TRIAL: 'TRIAL', ACTIVE: 'ACTIVE', EXPIRED: 'EXPIRED', SUSPENDED: 'SUSPENDED' } as const;
+export type PlatformSubscriptionStatus = (typeof PlatformSubscriptionStatus)[keyof typeof PlatformSubscriptionStatus];
+export const PLATFORM_SUBSCRIPTION_STATUS_LABELS: Record<PlatformSubscriptionStatus, string> = {
+  PENDING_PAYMENT: 'Pending payment',
+  TRIAL: 'Trial',
+  ACTIVE: 'Active',
+  EXPIRED: 'Expired',
+  SUSPENDED: 'Suspended',
+};
+export const BillingCycle = { MONTHLY: 'MONTHLY', YEARLY: 'YEARLY' } as const;
+export type BillingCycle = (typeof BillingCycle)[keyof typeof BillingCycle];
+export const BILLING_CYCLE_LABELS: Record<BillingCycle, string> = { MONTHLY: 'Monthly', YEARLY: 'Yearly' };
+export const PLATFORM_TRIAL_DAYS = 15;
+
+export interface PlatformSubscriptionRecord {
+  id: string;
+  status: PlatformSubscriptionStatus;
+  planName: string;
+  billingCycle: BillingCycle | null;
+  amountPaise: number;
+  startDate: string | null;
+  endDate: string | null;
+  trialStartDate: string | null;
+  trialEndDate: string | null;
+  paymentReference: string | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+/**
+ * What the owner app / admin shows, resolved by business date (inclusive): `current` is the period covering today
+ * (or, with no access, the latest ended period / admin status row); renewals that start later are in `upcoming`.
+ */
+export interface PlatformBillingSummary {
+  status: PlatformSubscriptionStatus;
+  /** Mess operations (changes) allowed: ACTIVE within the paid period, or TRIAL within the trial. */
+  accessAllowed: boolean;
+  /** Last day of access (paid end or trial end), if any. */
+  accessUntil: string | null;
+  daysRemaining: number | null;
+  current: PlatformSubscriptionRecord | null;
+  /** Paid renewals/trials whose start date is after today, earliest first. */
+  upcoming: PlatformSubscriptionRecord[];
+  /** Optional support contact from server config (no hardcoded numbers). */
+  support: { email: string | null; phone: string | null };
+}
+
+export type BillingRecordPhase = 'CURRENT' | 'UPCOMING' | 'PAST';
+export interface AdminBillingDetail extends PlatformBillingSummary {
+  /** Every recorded change, newest first. */
+  history: (PlatformSubscriptionRecord & { phase: BillingRecordPhase })[];
+}
+
+export interface GrantTrialRequest {
+  notes?: string;
+}
+export interface ActivatePlatformSubscriptionRequest {
+  planName: string;
+  billingCycle: BillingCycle;
+  amountPaise: number;
+  /** Defaults to the day after current access ends (renewal) or today. */
+  startDate?: string;
+  /** Defaults to start + 1 month / 1 year − 1 day. */
+  endDate?: string;
+  paymentReference?: string;
+  notes?: string;
+}
+export interface PlatformStatusChangeRequest {
+  status: 'EXPIRED' | 'SUSPENDED';
+  notes?: string;
+}
+
+export const PLATFORM_SUBSCRIPTION_INACTIVE_MESSAGE = 'Your MessMate subscription is not active. Contact support to activate or renew.';
+
+/** One headline + tone for the owner Billing screen (web and mobile). */
+export function billingHeadline(s: PlatformBillingSummary, formatDate: (date: string) => string): { text: string; tone: 'success' | 'warning' | 'danger' } {
+  if (s.accessAllowed && s.status === PlatformSubscriptionStatus.TRIAL) {
+    return { text: `Trial active · ${s.daysRemaining} day${s.daysRemaining === 1 ? '' : 's'} remaining`, tone: 'warning' };
+  }
+  if (s.accessAllowed && s.accessUntil) return { text: `Subscription active until ${formatDate(s.accessUntil)}`, tone: 'success' };
+  return { text: PLATFORM_SUBSCRIPTION_INACTIVE_MESSAGE, tone: 'danger' };
+}
+
+/** "Yearly · ₹12,000.00 · 10 Nov 2026 – 9 Nov 2027" for an upcoming renewal/trial. */
+export function billingPeriodLabel(r: PlatformSubscriptionRecord, formatDate: (date: string) => string, formatMoney: (paise: number) => string): string {
+  const from = r.status === PlatformSubscriptionStatus.TRIAL ? r.trialStartDate : r.startDate;
+  const to = r.status === PlatformSubscriptionStatus.TRIAL ? r.trialEndDate : r.endDate;
+  return [r.billingCycle ? BILLING_CYCLE_LABELS[r.billingCycle] : null, r.amountPaise ? formatMoney(r.amountPaise) : null, from && to ? `${formatDate(from)} – ${formatDate(to)}` : null]
+    .filter(Boolean)
+    .join(' · ');
 }

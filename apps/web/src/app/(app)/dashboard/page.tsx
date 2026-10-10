@@ -30,7 +30,7 @@ const MENU_STATUS: Record<MenuStatusToday, { label: string; tone: 'success' | 'w
 };
 
 const linkClass = 'inline-flex min-h-11 items-center rounded-control border border-border px-4 text-sm font-semibold hover:bg-canvas';
-const primaryLinkClass = 'inline-flex min-h-11 items-center rounded-control bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700';
+const primaryLinkClass = 'inline-flex min-h-11 items-center rounded-control bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 dark:hover:bg-brand-500';
 
 function quickActions(role: Role | undefined) {
   return [

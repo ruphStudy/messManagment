@@ -29,6 +29,7 @@ import { ReportsService } from '../reports/reports.service';
 import { ListStudentsQueryDto } from '../students/dto/student.dto';
 import { ListSubscriptionsQueryDto } from '../subscriptions/dto/subscription.dto';
 import { expiringSoonWhere, statusWhere } from '../subscriptions/subscription.rules';
+import { resolveBilling } from '../billing/billing.service';
 import type { AdminMessListQueryDto, AdminRecordsQueryDto } from './dto/admin.dto';
 
 const fullName = (p: { firstName: string; lastName: string | null }) => [p.firstName, p.lastName].filter(Boolean).join(' ');
@@ -71,6 +72,7 @@ export class AdminMessesService {
           createdAt: true,
           owner: { select: ownerSelect },
           _count: { select: { students: { where: { status: StudentStatus.ACTIVE } } } },
+          platformSubscriptions: { orderBy: { createdAt: 'desc' }, take: 50 },
         },
         orderBy: [{ [q.sortBy ?? 'createdAt']: order }, { id: 'asc' }],
         skip: q.skip,
@@ -89,6 +91,7 @@ export class AdminMessesService {
         createdAt: m.createdAt.toISOString(),
         owner: { id: m.owner.id, name: fullName(m.owner), mobile: m.owner.mobile, email: m.owner.email },
         activeStudents: m._count.students,
+        billingStatus: resolveBilling(m.platformSubscriptions).status,
       })),
       total,
       q,

@@ -95,6 +95,8 @@ export type ServeResult =
 export type MealQrResponse =
   | { state: 'NOT_LINKED' }
   | { state: 'INACTIVE'; messName: string }
+  /** The platform temporarily suspended the mess: no meals are served, so no QR. */
+  | { state: 'MESS_UNAVAILABLE'; messName: string }
   | { state: 'NO_PLAN'; messName: string; studentName: string }
   | {
       state: 'READY';

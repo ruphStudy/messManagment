@@ -4,26 +4,31 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ChevronDown, LogOut, Menu, Settings, X } from 'lucide-react';
-import { ROLE_LABELS } from '@mess/shared';
+import { can, Permission, ROLE_LABELS } from '@mess/shared';
 import { Logo } from '@/components/brand';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@/components/ui/modal';
 import { useAuth } from '@/lib/auth/auth-context';
 import { cn } from '@/lib/cn';
-import { ADMIN_NAV_ITEMS, navForRole } from '@/lib/navigation';
+import { ADMIN_NAV_ITEMS, navForRole, studentNav } from '@/lib/navigation';
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { Alert } from '@/components/ui/alert';
+import { ThemeSelector } from '@/components/ui/theme-selector';
+import { useStudentMess } from '@/lib/student/mess-context';
 
-function SidebarNav({ admin, onNavigate }: { admin: boolean; onNavigate?: () => void }) {
+type Area = 'mess' | 'admin' | 'student';
+const AREA_ROOT: Record<Area, string> = { mess: '/dashboard', admin: '/admin', student: '/student' };
+
+function SidebarNav({ area, onNavigate }: { area: Area; onNavigate?: () => void }) {
   const { session } = useAuth();
   const pathname = usePathname();
   if (!session) return null;
 
   return (
     <nav aria-label="Main" className="flex flex-col gap-0.5 p-3">
-      {(admin ? ADMIN_NAV_ITEMS : navForRole(session.role)).map(({ label, href, icon: Icon, soon }) => {
-        // "/admin" (dashboard) is a prefix of every admin page, so it only matches exactly.
-        const active = pathname === href || (href !== '/admin' && pathname.startsWith(`${href}/`));
+      {(area === 'admin' ? ADMIN_NAV_ITEMS : area === 'student' ? studentNav(!!session.student?.linked) : navForRole(session.role)).map(({ label, href, icon: Icon, soon }) => {
+        // The area root ("/admin", "/student") is a prefix of every page in it, so it only matches exactly.
+        const active = pathname === href || (href !== AREA_ROOT[area] && pathname.startsWith(`${href}/`));
         const content = (
           <>
             <Icon className="size-5 shrink-0" aria-hidden />
@@ -52,7 +57,7 @@ function SidebarNav({ admin, onNavigate }: { admin: boolean; onNavigate?: () => 
   );
 }
 
-function UserMenu({ admin, onLogout }: { admin: boolean; onLogout: () => void }) {
+function UserMenu({ area, onLogout }: { area: Area; onLogout: () => void }) {
   const { session } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -90,23 +95,27 @@ function UserMenu({ admin, onLogout }: { admin: boolean; onLogout: () => void })
         <ChevronDown className="size-4 text-ink-muted" aria-hidden />
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 z-30 mt-2 w-60 rounded-card border border-border bg-surface p-2 shadow-lg">
+        <div role="menu" className="absolute right-0 z-30 mt-2 w-72 rounded-card border border-border bg-surface p-2 shadow-lg">
           <div className="border-b border-border px-3 pb-2 pt-1">
             <p className="text-sm font-semibold">
               {user.firstName} {user.lastName}
             </p>
             <p className="truncate text-xs text-ink-muted">{user.email ?? user.mobile}</p>
           </div>
-          {!admin && (
+          {area !== 'admin' && (
             <Link
               role="menuitem"
-              href="/settings"
+              href={area === 'student' ? '/student/profile' : '/settings'}
               onClick={() => setOpen(false)}
               className="mt-1 flex min-h-11 items-center gap-2 rounded-control px-3 text-sm hover:bg-canvas"
             >
-              <Settings className="size-4" aria-hidden /> Settings
+              <Settings className="size-4" aria-hidden /> {area === 'student' ? 'Profile & settings' : 'Settings'}
             </Link>
           )}
+          <div className="border-b border-border px-1 py-2">
+            <p className="mb-1 px-2 text-xs font-medium text-ink-muted">Theme</p>
+            <ThemeSelector compact />
+          </div>
           <button
             role="menuitem"
             onClick={() => {
@@ -127,7 +136,9 @@ function UserMenu({ admin, onLogout }: { admin: boolean; onLogout: () => void })
  * Authenticated layout: sidebar on desktop, slide-in drawer on small screens.
  * `admin` switches to the platform admin portal (its own navigation, no mess items).
  */
-export function AppShell({ children, admin = false }: { children: ReactNode; admin?: boolean }) {
+export function AppShell({ children, admin = false, student = false }: { children: ReactNode; admin?: boolean; student?: boolean }) {
+  const area: Area = admin ? 'admin' : student ? 'student' : 'mess';
+  const studentMess = useStudentMess();
   const { session, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -138,7 +149,7 @@ export function AppShell({ children, admin = false }: { children: ReactNode; adm
   useEffect(() => setDrawerOpen(false), [pathname]);
 
   // A temporary password (set by the owner/manager) must be replaced before using the app.
-  const mustChange = !admin && !!session?.user.mustChangePassword;
+  const mustChange = area === 'mess' && !!session?.user.mustChangePassword;
   useEffect(() => {
     if (mustChange && pathname !== '/settings') router.replace('/settings?tab=account');
   }, [mustChange, pathname, router]);
@@ -156,7 +167,7 @@ export function AppShell({ children, admin = false }: { children: ReactNode; adm
           <Logo />
         </div>
         <div className="flex-1 overflow-y-auto">
-          <SidebarNav admin={admin} />
+          <SidebarNav area={area} />
         </div>
       </aside>
 
@@ -171,7 +182,7 @@ export function AppShell({ children, admin = false }: { children: ReactNode; adm
               </button>
             </div>
             <div className="flex-1 overflow-y-auto">
-              <SidebarNav admin={admin} onNavigate={() => setDrawerOpen(false)} />
+              <SidebarNav area={area} onNavigate={() => setDrawerOpen(false)} />
             </div>
           </div>
         </div>
@@ -182,17 +193,42 @@ export function AppShell({ children, admin = false }: { children: ReactNode; adm
           <Menu className="size-6" />
         </button>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold">{admin ? 'Platform Admin' : session?.membership?.mess.name}</p>
+          {area === 'student' ? (
+            <div className="flex min-w-0 items-center gap-2">
+              <p className="truncate font-semibold">{studentMess?.current?.messName ?? 'MessMate'}</p>
+              {studentMess && studentMess.memberships.length > 1 && (
+                <button type="button" onClick={studentMess.openChooser} className="shrink-0 text-sm font-medium text-brand-700 hover:underline">Switch mess</button>
+              )}
+            </div>
+          ) : (
+            <p className="truncate font-semibold">{area === 'admin' ? 'Platform Admin' : session?.membership?.mess.name}</p>
+          )}
         </div>
-        {!admin && <NotificationBell />}
-        <UserMenu admin={admin} onLogout={() => setConfirmLogout(true)} />
+        {area !== 'admin' && !mustChange && <NotificationBell href={area === 'student' ? '/student/notifications' : '/notifications'} />}
+        <UserMenu area={area} onLogout={() => setConfirmLogout(true)} />
       </header>
 
       <main className={cn('mx-auto px-4 py-6 sm:px-6 sm:py-8 print:max-w-none print:p-0', admin ? 'max-w-6xl' : 'max-w-5xl')}>
-        {!admin && session?.membership?.mess.status === 'SUSPENDED' && (
+        {area === 'student' && studentMess?.current?.messStatus === 'SUSPENDED' && (
+          <Alert tone="danger" className="mb-6">
+            <strong>Mess temporarily unavailable.</strong> You can see your history, but meal QR, pauses, feedback and complaints are paused for now.
+          </Alert>
+        )}
+        {area === 'mess' && session?.membership?.mess.status === 'SUSPENDED' && (
           <Alert tone="danger" className="mb-6">
             <strong>This mess is temporarily unavailable.</strong> The platform team has paused it. You can still view your records, but changes,
             QR scanning and payments are blocked. Please contact support.
+          </Alert>
+        )}
+        {area === 'mess' && session?.billing && !session.billing.accessAllowed && session.membership?.mess.status !== 'SUSPENDED' && (
+          <Alert tone="danger" className="mb-6">
+            <strong>MessMate subscription {session.billing.status === 'PENDING_PAYMENT' ? 'not activated yet' : 'not active'}.</strong> You can view your records,
+            but changes (students, plans, menus, attendance, payments, expenses) are blocked until the subscription is activated or a trial is granted.{' '}
+            {can(session.role, Permission.MESS_SETTINGS_UPDATE) ? (
+              <Link href="/settings?tab=billing" className="font-semibold underline">View Billing</Link>
+            ) : (
+              'Please ask the mess owner to contact support.'
+            )}
           </Alert>
         )}
         {children}
@@ -201,7 +237,7 @@ export function AppShell({ children, admin = false }: { children: ReactNode; adm
       <ConfirmDialog
         open={confirmLogout}
         title="Sign out?"
-        description={admin ? 'You will need to sign in again to use the admin portal.' : 'You will need to sign in again to manage your mess.'}
+        description={area === 'admin' ? 'You will need to sign in again to use the admin portal.' : area === 'student' ? 'You will need your mobile number and a code to sign in again.' : 'You will need to sign in again to manage your mess.'}
         confirmLabel="Sign out"
         tone="danger"
         loading={loggingOut}

@@ -11,7 +11,7 @@ import { AppText } from '@/components/text';
 import { useToast } from '@/components/toast';
 import { api, errorMessage } from '@/lib/api';
 import { menuDayLabel } from '@/lib/use-student-menu';
-import { colors, radius, spacing, TOUCH_TARGET } from '@/theme/tokens';
+import { colors, radius, spacing, TOUCH_TARGET, themed } from '@/theme/tokens';
 
 type Values = Record<RatingDimension, number | null>;
 const EMPTY: Values = { overall: null, taste: null, quality: null, quantity: null, cleanliness: null };
@@ -118,10 +118,10 @@ export default function RateMealScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: { borderRadius: radius.control, borderWidth: 1.5, borderColor: colors.border, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, backgroundColor: colors.surface, minHeight: TOUCH_TARGET },
   chipOn: { backgroundColor: colors.brand600, borderColor: colors.brand600 },
   input: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.control, minHeight: 90, padding: spacing.md, fontSize: 16, color: colors.ink, textAlignVertical: 'top' },
   link: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, minHeight: TOUCH_TARGET },
-});
+}));

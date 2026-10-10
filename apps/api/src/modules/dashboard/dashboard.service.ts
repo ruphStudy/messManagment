@@ -12,7 +12,7 @@ import {
   type Role,
 } from '@mess/shared';
 import { PrismaService } from '../../prisma/prisma.service';
-import { fromDateString, monthRange } from '../../common/http/dates';
+import { businessDayStart, fromDateString, monthRange } from '../../common/http/dates';
 import { ComplaintsService } from '../complaints/complaints.service';
 import { ExpenseSummaryService } from '../expenses/expense-summary.service';
 import { FeedbackService } from '../feedback/feedback.service';
@@ -137,7 +137,7 @@ export class DashboardService {
   private async complaintCounts(messId: string, monthStart: string) {
     const [counts, resolvedThisMonth] = await Promise.all([
       this.complaints.counts(messId),
-      this.prisma.complaint.count({ where: { messId, resolvedAt: { gte: fromDateString(monthStart) } } }),
+      this.prisma.complaint.count({ where: { messId, resolvedAt: { gte: businessDayStart(monthStart) } } }),
     ]);
     return { ...counts, resolvedThisMonth };
   }

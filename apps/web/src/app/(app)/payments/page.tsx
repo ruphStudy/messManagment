@@ -13,6 +13,7 @@ import {
   Permission,
   type PaymentRecord,
 } from '@mess/shared';
+import { PersonName } from '@/components/ui/avatar';
 import { TransactionBadge } from '@/components/payments/payment-badges';
 import { PaymentTabs } from '@/components/payments/payment-tabs';
 import { RecordPaymentDialog } from '@/components/payments/record-payment-dialog';
@@ -104,7 +105,7 @@ function PaymentsScreen() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={cn('text-lg font-bold', reversed && 'line-through decoration-1')}>{formatPaise(p.amountPaise)}</span>
-                        <span className="font-semibold">{fullName(p.student)}</span>
+                        <PersonName name={fullName(p.student)} className="font-semibold" />
                         <TransactionBadge status={p.status} />
                       </div>
                       <p className="text-sm text-ink-muted">

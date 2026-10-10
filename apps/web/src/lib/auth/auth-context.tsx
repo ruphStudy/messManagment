@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { AuthContext, AuthResponse, LoginRequest } from '@mess/shared';
-import { api, onSessionExpired, refreshSession, setAccessToken } from '@/lib/api';
+import { api, onSessionExpired, refreshSession, setAccessToken, setStudentMessId } from '@/lib/api';
 import { useToast } from '@/components/ui/toast';
 
 type Status = 'loading' | 'authenticated' | 'guest';
@@ -13,6 +13,8 @@ interface AuthState {
   /** Set when the app could not reach the server while restoring the session. */
   restoreError: boolean;
   login(input: LoginRequest): Promise<AuthContext>;
+  /** Student sign-in / signup with a one-time code (same on every device). */
+  verifyOtp(mobile: string, code: string): Promise<AuthContext>;
   logout(): Promise<void>;
   /** Re-reads the current user and mess membership (e.g. after creating a mess). */
   reload(): Promise<AuthContext>;
@@ -21,8 +23,8 @@ interface AuthState {
 
 const Ctx = createContext<AuthState | null>(null);
 
-function toContext({ user, membership, role }: AuthResponse | AuthContext): AuthContext {
-  return { user, membership, role };
+function toContext({ user, membership, role, student, billing }: AuthResponse | AuthContext): AuthContext {
+  return { user, membership, role, student, billing };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -34,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clear = useCallback(() => {
     setAccessToken(null);
+    setStudentMessId(null);
     setSession(null);
     setStatus('guest');
   }, []);
@@ -76,6 +79,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return ctx;
   }, []);
 
+  const verifyOtp = useCallback(async (mobile: string, code: string) => {
+    const res = await api<AuthResponse>('/auth/otp/verify', { method: 'POST', body: { mobile, code }, auth: false });
+    setAccessToken(res.accessToken);
+    const ctx = toContext(res);
+    setSession(ctx);
+    setStatus('authenticated');
+    return ctx;
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await api('/auth/logout', { method: 'POST', auth: false });
@@ -84,6 +96,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [clear]);
 
+  // Tab back in focus: re-read the context so role/membership/link/suspension changes route correctly.
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') api<AuthContext>('/auth/me').then((ctx) => setSession(toContext(ctx))).catch(() => undefined);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [status]);
+
   const reload = useCallback(async () => {
     const ctx = await api<AuthContext>('/auth/me');
     setSession(ctx);
@@ -91,8 +113,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthState>(
-    () => ({ status, session, restoreError, login, logout, reload, retryRestore: () => setRestoreAttempt((n) => n + 1) }),
-    [status, session, restoreError, login, logout, reload],
+    () => ({ status, session, restoreError, login, verifyOtp, logout, reload, retryRestore: () => setRestoreAttempt((n) => n + 1) }),
+    [status, session, restoreError, login, verifyOtp, logout, reload],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

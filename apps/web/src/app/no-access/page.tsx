@@ -11,10 +11,8 @@ function NoAccess() {
   const { session, logout } = useAuth();
   const description =
     session?.role === Role.STUDENT
-      ? 'Students use the mobile app to see their mess details.'
-      : session?.role === Role.PLATFORM_ADMIN
-        ? 'The platform admin panel is not available yet.'
-        : 'Your account is not linked to a mess yet. Ask your mess owner to add you.';
+      ? 'Open your student home to see your mess details.'
+      : 'Your account is not linked to a mess yet. Ask your mess owner to add you.';
 
   return (
     <div className="grid min-h-dvh place-items-center">

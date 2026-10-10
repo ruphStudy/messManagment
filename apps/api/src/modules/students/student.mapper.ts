@@ -34,7 +34,7 @@ export function toStudentDetail(student: MessStudent & { user: Pick<User, 'lastL
 }
 
 export function toStudentSelfProfile(
-  student: MessStudent & { mess: Pick<Mess, 'id' | 'name' | 'mobile' | 'city'> },
+  student: MessStudent & { mess: Pick<Mess, 'id' | 'name' | 'mobile' | 'city' | 'status'> },
 ): StudentSelfProfile {
   const {
     messId: _messId,

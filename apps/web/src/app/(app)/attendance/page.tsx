@@ -16,6 +16,7 @@ import {
   type AttendanceRecord,
   type ExpectedMeals,
 } from '@mess/shared';
+import { PersonName } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -111,7 +112,7 @@ function AttendanceScreen() {
               <Link href="/attendance/manual" className={`${linkButton} border border-border bg-surface hover:bg-canvas`}>
                 <Keyboard className="size-4" aria-hidden /> Manual
               </Link>
-              <Link href="/attendance/scan" className={`${linkButton} bg-brand-600 text-white hover:bg-brand-700`}>
+              <Link href="/attendance/scan" className={`${linkButton} bg-brand-600 text-white hover:bg-brand-700 dark:hover:bg-brand-500`}>
                 <QrCode className="size-4" aria-hidden /> Scan QR
               </Link>
             </>
@@ -184,7 +185,7 @@ function AttendanceScreen() {
                   <Card className={cn('flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-4', reversed && 'bg-canvas')}>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className={cn('font-semibold', reversed && 'line-through decoration-1')}>{fullName(a.student)}</span>
+                        <PersonName name={fullName(a.student)} className={cn('font-semibold', reversed && 'line-through decoration-1')} />
                         <Badge tone="brand">{MEAL_LABELS[a.mealType]}</Badge>
                         <Badge tone={a.source === 'QR' ? 'info' : 'neutral'}>{a.source === 'QR' ? 'QR' : 'Manual'}</Badge>
                         {reversed && <Badge tone="danger">Reversed</Badge>}

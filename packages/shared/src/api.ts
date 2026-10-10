@@ -1,6 +1,8 @@
 import type { FoodType, MembershipStatus, MessStatus, MessType, UserStatus } from './enums';
 import type { MessRole, Role } from './roles';
+import type { StudentStatus } from './students';
 import type { MealServingTimes } from './meal-times';
+import type { PlatformSubscriptionStatus } from './admin';
 
 export const API_PREFIX = '/api/v1';
 
@@ -83,6 +85,21 @@ export const ErrorCode = {
   STAFF_CANNOT_MODIFY_SELF: 'STAFF_CANNOT_MODIFY_SELF',
   STAFF_ACCOUNT_DISABLED: 'STAFF_ACCOUNT_DISABLED',
   PASSWORD_INCORRECT: 'PASSWORD_INCORRECT',
+  PASSWORD_CHANGE_REQUIRED: 'PASSWORD_CHANGE_REQUIRED',
+  /** Public signup with a mobile/email that already has an account: sign in instead. */
+  ACCOUNT_EXISTS: 'ACCOUNT_EXISTS',
+  /** MessMate subscription not active (pending payment / expired / suspended): mess changes blocked; viewing allowed. */
+  PLATFORM_SUBSCRIPTION_REQUIRED: 'PLATFORM_SUBSCRIPTION_REQUIRED',
+  PLAN_REQUEST_PENDING: 'PLAN_REQUEST_PENDING',
+  PLAN_REQUEST_NOT_FOUND: 'PLAN_REQUEST_NOT_FOUND',
+  /** Student linked to several usable messes and no x-mess-id sent: the client must pick one. */
+  STUDENT_MESS_SELECTION_REQUIRED: 'STUDENT_MESS_SELECTION_REQUIRED',
+  /** x-mess-id is not one of this student's messes (or the record was archived). */
+  STUDENT_MESS_NOT_AVAILABLE: 'STUDENT_MESS_NOT_AVAILABLE',
+  /** OTP sign-in requested for an account that signs in with a password (owner/manager/staff/admin). */
+  PASSWORD_SIGN_IN_REQUIRED: 'PASSWORD_SIGN_IN_REQUIRED',
+  /** Password sign-in attempted for a student account (students sign in with an OTP on any device). */
+  OTP_SIGN_IN_REQUIRED: 'OTP_SIGN_IN_REQUIRED',
   RATE_LIMITED: 'RATE_LIMITED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;
@@ -138,10 +155,70 @@ export interface MembershipSummary {
   mess: { id: string; name: string; status: MessStatus };
 }
 
-/** Current user plus the mess they are working in (if any). */
+/** One mess a student account is linked to (one student record per mess). */
+export interface StudentMessMembership {
+  studentId: string;
+  messId: string;
+  messName: string;
+  status: StudentStatus;
+  messStatus: MessStatus;
+  /** ACTIVE record in an ACTIVE mess: selectable for normal use. */
+  usable: boolean;
+}
+
+/**
+ * A student account's links to mess records (made by verified mobile when a mess adds it). A student may
+ * belong to several messes at once; the client keeps the current one and sends it as `x-mess-id`.
+ */
+export interface StudentLinkContext {
+  linked: boolean;
+  /** Non-archived records, usable first. */
+  memberships: StudentMessMembership[];
+  /** The mess the server picks without a selection: the only usable one, else null (choose). */
+  defaultMessId: string | null;
+  /** Back-compat: the default mess (null when none or a choice is needed). */
+  mess: { id: string; name: string; status: MessStatus } | null;
+}
+
+/** Header carrying the student's selected mess on student self-service requests (verified server-side). */
+export const STUDENT_MESS_HEADER = 'x-mess-id';
+
+/**
+ * Which mess the student app should use: the saved one if still a membership, else the only usable one,
+ * else null (show the chooser when there are several, or the waiting state when none).
+ */
+export function pickStudentMess(ctx: StudentLinkContext | null | undefined, saved: string | null): { messId: string | null; needsChoice: boolean } {
+  if (!ctx?.linked) return { messId: null, needsChoice: false };
+  const memberships = studentMemberships(ctx);
+  if (saved && memberships.some((m) => m.messId === saved)) return { messId: saved, needsChoice: false };
+  const usable = memberships.filter((m) => m.usable);
+  if (usable.length === 1) return { messId: usable[0].messId, needsChoice: false };
+  if (usable.length > 1) return { messId: null, needsChoice: true };
+  // Nothing usable (inactive record / suspended mess): use the only record for read-only history, else choose.
+  return memberships.length === 1 ? { messId: memberships[0].messId, needsChoice: false } : { messId: null, needsChoice: memberships.length > 1 };
+}
+
+/**
+ * All of the student's messes from a session. Tolerates a response from an API build that predates multi-mess
+ * (only `student.mess`): then that single mess is the list, never a crash.
+ */
+export function studentMemberships(ctx: StudentLinkContext | null | undefined): StudentMessMembership[] {
+  if (!ctx?.linked) return [];
+  if (Array.isArray(ctx.memberships)) return ctx.memberships;
+  return ctx.mess ? [{ studentId: '', messId: ctx.mess.id, messName: ctx.mess.name, status: 'ACTIVE', messStatus: ctx.mess.status, usable: ctx.mess.status === 'ACTIVE' }] : [];
+}
+
+/**
+ * Current user plus the mess they are working in (if any). Role decides permissions, never the device:
+ * any role may sign in from web or mobile; clients only choose what to show.
+ */
 export interface AuthContext {
   user: AuthUser;
   membership: MembershipSummary | null;
+  /** Student accounts only (null otherwise); returned by /auth/me and sign-in responses. */
+  student?: StudentLinkContext | null;
+  /** Team members only: MessMate (SaaS) access of their mess. Rechecked on /auth/me, sign-in and refresh. */
+  billing?: { status: PlatformSubscriptionStatus; accessAllowed: boolean; accessUntil: string | null } | null;
   /** Effective role for authorization: the membership role if present, else the user's role. */
   role: Role;
 }
@@ -259,3 +336,30 @@ export interface PasswordResetConfirm {
   code: string;
   newPassword: string;
 }
+
+/**
+ * Fixed, user-friendly wording for account/session-level errors shown by web and mobile.
+ * Other codes keep the server message, which is already written for users and carries specifics
+ * (e.g. which meal, how many credits). Never shows stack traces or internal details.
+ */
+export const FRIENDLY_ERROR_MESSAGES: Partial<Record<ErrorCode, string>> = {
+  MESS_SUSPENDED: 'This mess is temporarily unavailable. You can view records, but changes are paused. Please contact support.',
+  PASSWORD_CHANGE_REQUIRED: 'Please set a new password to continue.',
+  PLATFORM_SUBSCRIPTION_REQUIRED: 'Your MessMate subscription is not active. You can view records; contact support to activate or renew.',
+  INTERNAL_ERROR: 'Something went wrong on our side. Please try again.',
+};
+
+export function friendlyErrorMessage(code: string | undefined, serverMessage: string | undefined): string {
+  return (code && FRIENDLY_ERROR_MESSAGES[code as ErrorCode]) || serverMessage || 'Something went wrong. Please try again.';
+}
+
+// ── Public signup ──
+
+/**
+ * The only two self-signup choices. This is an intent, not a role: the API decides what is created.
+ * OWNER → a MESS_OWNER account that can only own a NEW mess it creates (onboarding);
+ * STUDENT → an OTP-verified account linked to mess records that match its mobile.
+ * Managers/staff are added by their mess; platform admins are internal.
+ */
+export const SignupIntent = { OWNER: 'OWNER', STUDENT: 'STUDENT' } as const;
+export type SignupIntent = (typeof SignupIntent)[keyof typeof SignupIntent];

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import type { PaginationMeta, SubscriptionSummary } from '@mess/shared';
 import { Button } from '@/components/button';
+import { ChoosePlan } from '@/components/choose-plan';
 import { Card } from '@/components/layout';
 import { EmptyState, ErrorState, FullScreenLoader } from '@/components/states';
 import { StatusPill } from '@/components/subscription-card';
@@ -71,6 +72,7 @@ export default function PlanHistoryScreen() {
       renderItem={({ item }) => <HistoryItem sub={item} />}
       refreshing={loading && meta?.page === 1}
       onRefresh={() => load(1)}
+      ListHeaderComponent={<View style={{ gap: 12, marginBottom: 8 }}><ChoosePlan /><AppText variant="label" muted>PLAN HISTORY</AppText></View>}
       ListEmptyComponent={<EmptyState icon="time-outline" title="No previous subscriptions." description="Plans your mess assigns will show here." />}
       ListFooterComponent={
         hasMore ? (

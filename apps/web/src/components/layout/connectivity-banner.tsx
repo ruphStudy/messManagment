@@ -17,7 +17,7 @@ export function ConnectivityBanner() {
   const online = useSyncExternalStore(subscribe, () => navigator.onLine, () => true);
   if (online) return null;
   return (
-    <div role="status" className="sticky top-0 z-50 flex items-center justify-center gap-2 bg-ink px-4 py-2 text-sm text-white">
+    <div role="status" className="sticky top-0 z-50 flex items-center justify-center gap-2 bg-ink px-4 py-2 text-sm text-white dark:text-canvas">
       <WifiOff className="size-4" aria-hidden />
       You are offline. Changes will not be saved until you reconnect.
     </div>

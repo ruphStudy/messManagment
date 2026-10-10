@@ -148,6 +148,15 @@ async function main() {
         pincode: '440001',
       },
     }));
+  // Demo messes get an active MessMate subscription (new real messes start PENDING_PAYMENT).
+  for (const m of [mess, otherMess]) {
+    if (!(await prisma.platformSubscription.count({ where: { messId: m.id, status: 'ACTIVE' } }))) {
+      const end = new Date();
+      end.setUTCFullYear(end.getUTCFullYear() + 1);
+      end.setUTCDate(end.getUTCDate() - 1);
+      await prisma.platformSubscription.create({ data: { messId: m.id, status: 'ACTIVE', planName: 'Demo', billingCycle: 'YEARLY', startDate: new Date(), endDate: end, notes: 'Seed data' } });
+    }
+  }
   await prisma.messMembership.upsert({
     where: { userId_messId: { userId: otherOwner.id, messId: otherMess.id } },
     update: {},

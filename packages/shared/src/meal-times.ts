@@ -73,3 +73,8 @@ const IST_OFFSET_MS = 330 * 60_000;
 export function istClockTime(now: Date = new Date()): string {
   return new Date(now.getTime() + IST_OFFSET_MS).toISOString().slice(11, 16);
 }
+
+/** Today's Indian date (YYYY-MM-DD) without Intl time-zone support (mobile-safe). */
+export function istToday(now: Date = new Date()): string {
+  return new Date(now.getTime() + IST_OFFSET_MS).toISOString().slice(0, 10);
+}

@@ -84,7 +84,7 @@ export class NotificationsService {
         pushStatus: wantsPush(t.userId) ? PushStatus.PENDING : PushStatus.NOT_SENT,
       })),
       skipDuplicates: true,
-      select: { id: true, userId: true, title: true, body: true, data: true, pushStatus: true },
+      select: { id: true, userId: true, title: true, body: true, data: true, pushStatus: true, messId: true },
     });
     const created = new Set(rows.map((r) => r.userId));
     result.createdUserIds = [...created];
@@ -105,7 +105,7 @@ export class NotificationsService {
   }
 
   /** Background push; marks each notification SENT / FAILED and deactivates unregistered devices. */
-  private async deliverPush(rows: { id: string; userId: string; title: string; body: string; data: Prisma.JsonValue }[]) {
+  private async deliverPush(rows: { id: string; userId: string; title: string; body: string; data: Prisma.JsonValue; messId: string | null }[]) {
     if (!rows.length) return;
     try {
       const devices = await this.prisma.pushDevice.findMany({
@@ -115,7 +115,7 @@ export class NotificationsService {
       const messages = rows.flatMap((r) =>
         devices
           .filter((d) => d.userId === r.userId)
-          .map((d) => ({ row: r, device: d, message: { to: d.pushToken, title: r.title, body: r.body, data: { ...((r.data as object) ?? {}), notificationId: r.id } } })),
+          .map((d) => ({ row: r, device: d, message: { to: d.pushToken, title: r.title, body: r.body, data: { ...((r.data as object) ?? {}), notificationId: r.id, ...(r.messId ? { messId: r.messId } : {}) } } })),
       );
       const results = messages.length ? await this.push.send(messages.map((m) => m.message)) : [];
 
@@ -206,7 +206,7 @@ export class NotificationsService {
   }
 }
 
-export function toAppNotification(row: { id: string; type: NotificationType; title: string; body: string; data: Prisma.JsonValue; readAt: Date | null; createdAt: Date }): AppNotification {
+export function toAppNotification(row: { id: string; type: NotificationType; title: string; body: string; data: Prisma.JsonValue; readAt: Date | null; createdAt: Date; messId: string | null }): AppNotification {
   return {
     id: row.id,
     type: row.type,
@@ -215,5 +215,6 @@ export function toAppNotification(row: { id: string; type: NotificationType; tit
     data: (row.data as NotificationData | null) ?? null,
     readAt: row.readAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
+    messId: row.messId,
   };
 }

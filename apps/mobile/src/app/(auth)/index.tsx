@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { DEFAULT_COUNTRY_CODE, firstError, validators } from '@mess/shared';
@@ -9,7 +9,7 @@ import { AppText } from '@/components/text';
 import { TextField } from '@/components/text-field';
 import { errorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { colors, spacing } from '@/theme/tokens';
+import { colors, spacing, themed } from '@/theme/tokens';
 
 export default function MobileNumberScreen() {
   const { requestOtp } = useAuth();
@@ -42,7 +42,7 @@ export default function MobileNumberScreen() {
           <Ionicons name="restaurant" size={32} color="#fff" />
         </View>
         <AppText variant="display">Welcome to MessMate</AppText>
-        <AppText muted>Sign in with your mobile number to see your mess details.</AppText>
+        <AppText muted>Students sign in with a one-time code sent to their mobile.</AppText>
       </View>
 
       <TextField
@@ -66,13 +66,18 @@ export default function MobileNumberScreen() {
 
       <Button title="Continue" onPress={submit} loading={loading} />
       <AppText variant="caption" muted style={styles.note}>
-        We will send a one-time code to this number.
+        We will send a one-time code to this number. New students get an account automatically.
       </AppText>
+
+      <Button title="Owner, manager or staff? Sign in with password" variant="secondary" onPress={() => router.push('/password')} />
+      <Pressable onPress={() => router.push('/signup')} accessibilityRole="link" style={styles.link}>
+        <AppText style={{ color: colors.brand700, fontWeight: '600' }}>New here? Create an account</AppText>
+      </Pressable>
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   hero: { gap: spacing.sm, marginTop: spacing.xxl, marginBottom: spacing.lg },
   logo: {
     width: 64,
@@ -83,5 +88,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.md,
   },
-  note: { textAlign: 'center' },
-});
+  note: { textAlign: 'center', marginBottom: spacing.md },
+  link: { alignItems: 'center', justifyContent: 'center', minHeight: 44, marginTop: spacing.sm },
+}));

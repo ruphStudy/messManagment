@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { AuthContext, AuthResponse, RequestOtpResponse } from '@mess/shared';
-import { api, logoutRequest, onSessionExpired, refreshSession, storeSession } from './api';
+import { AppState } from 'react-native';
+import type { AuthContext, AuthResponse, RegisterOwnerRequest, RequestOtpResponse } from '@mess/shared';
+import { api, logoutRequest, onSessionExpired, refreshSession, setStudentMessId, storeSession } from './api';
 import { unregisterPush } from './push';
 import { useToast } from '@/components/toast';
 
@@ -13,12 +14,18 @@ interface AuthState {
   retryRestore(): void;
   requestOtp(mobile: string): Promise<RequestOtpResponse>;
   verifyOtp(mobile: string, code: string): Promise<void>;
+  /** Password sign-in (owner, manager, staff) — the same accounts work on web and mobile. */
+  passwordLogin(identifier: string, password: string): Promise<void>;
+  /** Owner signup (no mess yet: the owner creates their own new mess during setup). */
+  registerOwner(input: RegisterOwnerRequest): Promise<void>;
   logout(): Promise<void>;
+  /** Re-reads the session (e.g. after a password change). */
+  refreshSession(): Promise<void>;
 }
 
 const Ctx = createContext<AuthState | null>(null);
 
-const toContext = ({ user, membership, role }: AuthResponse): AuthContext => ({ user, membership, role });
+const toContext = ({ user, membership, role, student, billing }: AuthResponse): AuthContext => ({ user, membership, role, student, billing });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const toast = useToast();
@@ -64,20 +71,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('authenticated');
   }, []);
 
+  const passwordLogin = useCallback(async (identifier: string, password: string) => {
+    const res = await api<AuthResponse>('/auth/login', { method: 'POST', body: { identifier, password, rememberMe: true }, auth: false });
+    await storeSession(res);
+    setSession(toContext(res));
+    setStatus('authenticated');
+  }, []);
+
+  const registerOwner = useCallback(
+    async (input: RegisterOwnerRequest) => {
+      await api('/auth/register/owner', { method: 'POST', body: input, auth: false });
+      await passwordLogin(input.mobile, input.password);
+    },
+    [passwordLogin],
+  );
+
+  const reloadSession = useCallback(async () => {
+    const ctx = await api<AuthContext>('/auth/me');
+    setSession(ctx);
+  }, []);
+
+  // Back from the background: re-read the context so role/membership/link/suspension changes apply.
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') api<AuthContext>('/auth/me').then(setSession).catch(() => undefined);
+    });
+    return () => sub.remove();
+  }, [status]);
+
   const logout = useCallback(async () => {
     try {
       // Stop push to this phone for this user while we still have a valid session.
       await unregisterPush();
       await logoutRequest();
     } finally {
+      setStudentMessId(null);
       setSession(null);
       setStatus('guest');
     }
   }, []);
 
   const value = useMemo<AuthState>(
-    () => ({ status, session, restoreError, retryRestore: () => setAttempt((n) => n + 1), requestOtp, verifyOtp, logout }),
-    [status, session, restoreError, requestOtp, verifyOtp, logout],
+    () => ({ status, session, restoreError, retryRestore: () => setAttempt((n) => n + 1), requestOtp, verifyOtp, passwordLogin, registerOwner, logout, refreshSession: reloadSession }),
+    [status, session, restoreError, requestOtp, verifyOtp, passwordLogin, registerOwner, logout, reloadSession],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

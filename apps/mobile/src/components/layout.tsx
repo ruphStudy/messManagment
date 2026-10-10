@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, View, type ViewProps } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
-import { colors, radius, spacing } from '@/theme/tokens';
+import { colors, radius, spacing, themed } from '@/theme/tokens';
 
 interface ScreenProps {
   children: ReactNode;
@@ -38,7 +38,7 @@ export function Card({ style, ...props }: ViewProps) {
   return <View style={[styles.card, style]} {...props} />;
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.canvas },
   flex: { flex: 1 },
   grow: { flexGrow: 1 },
@@ -51,4 +51,4 @@ const styles = StyleSheet.create({
     padding: spacing.lg + 4,
     gap: spacing.sm,
   },
-});
+}));

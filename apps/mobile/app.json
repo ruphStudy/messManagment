@@ -9,11 +9,13 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.messmate.student"
+      "bundleIdentifier": "com.messmate.student",
+      "buildNumber": "1"
     },
     "android": {
       "package": "com.messmate.student",
-      "softwareKeyboardLayoutMode": "pan"
+      "softwareKeyboardLayoutMode": "pan",
+      "versionCode": 1
     },
     "plugins": [
       "expo-router",
@@ -24,6 +26,13 @@
         {
           "photosPermission": "Allow MessMate to attach a photo to your complaint.",
           "cameraPermission": "Allow MessMate to take a photo for your complaint."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow MessMate to scan student meal QR codes.",
+          "recordAudioAndroid": false
         }
       ]
     ],

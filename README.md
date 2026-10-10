@@ -24,7 +24,8 @@ pnpm dev:web      # http://localhost:3100
 pnpm dev:mobile   # Expo; use your LAN IP in EXPO_PUBLIC_API_URL for a real phone
 ```
 
-Seeded logins (password `Password123`): owner `9000000001`, manager `9000000002`, staff `9000000003`.
+Seeded logins (password `Password123`, development only — the seed refuses `NODE_ENV=production`): platform admin `9000000000` (`/admin`),
+owner `9000000001`, manager `9000000002`, staff `9000000003`, second mess owner `9000000011`.
 Students sign in on mobile with any number. In development the OTP is logged by the API and shown in the app (`OTP_DEV_ECHO=true`).
 
 ## Architecture notes
@@ -43,4 +44,7 @@ Students sign in on mobile with any number. In development the OTP is logged by 
 
 ```bash
 pnpm typecheck && pnpm lint && pnpm build
+python3 apps/api/test/integration/run.py   # API integration suites (needs the seeded dev DB; starts/stops its own API on :4100)
 ```
+
+Releasing: see [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).

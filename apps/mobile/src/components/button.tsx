@@ -1,5 +1,5 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, type PressableProps } from 'react-native';
-import { colors, radius, TOUCH_TARGET } from '@/theme/tokens';
+import { colors, radius, TOUCH_TARGET, themed } from '@/theme/tokens';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
@@ -9,12 +9,12 @@ interface ButtonProps extends Omit<PressableProps, 'children'> {
   loading?: boolean;
 }
 
-const palette: Record<Variant, { bg: string; fg: string; border?: string }> = {
+const palette: Record<Variant, { bg: string; fg: string; border?: string }> = themed(() => ({
   primary: { bg: colors.brand600, fg: '#fff' },
   secondary: { bg: colors.surface, fg: colors.ink, border: colors.border },
   ghost: { bg: 'transparent', fg: colors.brand700 },
   danger: { bg: colors.danger, fg: '#fff' },
-};
+}));
 
 export function Button({ title, variant = 'primary', loading, disabled, style, ...props }: ButtonProps) {
   const p = palette[variant];

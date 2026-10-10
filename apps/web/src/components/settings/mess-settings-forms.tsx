@@ -22,7 +22,8 @@ interface Props {
 
 function useMessForm(mess: MessProfile) {
   const initial = messToForm(mess);
-  const form = useForm<MessFormValues>({ initial, validate: validateMess });
+  // Saved city/state: an older free-text city stays valid until city or state is changed.
+  const form = useForm<MessFormValues>({ initial, validate: (v) => validateMess(v, { state: mess.state, city: mess.city }) });
   const dirty = JSON.stringify(form.values) !== JSON.stringify(initial);
   return { form, initial, dirty };
 }

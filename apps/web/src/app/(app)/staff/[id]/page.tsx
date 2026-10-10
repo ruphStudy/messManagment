@@ -17,7 +17,7 @@ import { ErrorState } from '@/components/ui/states';
 import { useToast } from '@/components/ui/toast';
 import { api, errorMessage } from '@/lib/api';
 import { RequireAuth } from '@/lib/auth/guards';
-import { formatDate, formatDateTime, fullName } from '@/lib/format';
+import { formatTimestampDate, formatDateTime, fullName } from '@/lib/format';
 
 function ResetPasswordDialog({ staff, open, onClose, onDone }: { staff: StaffDetail; open: boolean; onClose: () => void; onDone: (s: StaffDetail) => void }) {
   const [password, setPassword] = useState('');
@@ -101,7 +101,7 @@ function StaffDetailScreen() {
       <Link href="/staff" className="mb-2 inline-flex min-h-9 items-center gap-1 text-sm font-medium text-brand-700 hover:underline"><ArrowLeft className="size-4" aria-hidden /> Team</Link>
       <PageHeader
         title={fullName(staff)}
-        description={`${ROLE_LABELS[staff.role]} · added ${formatDate(staff.addedAt)}`}
+        description={`${ROLE_LABELS[staff.role]} · added ${formatTimestampDate(staff.addedAt)}`}
         actions={
           <div className="flex flex-wrap gap-2">
             {actions.edit && !editing && <Button variant="secondary" onClick={() => setEditing(true)}><Pencil className="size-4" aria-hidden /> Edit</Button>}
@@ -144,7 +144,7 @@ function StaffDetailScreen() {
             <dt className="text-ink-muted">Role</dt><dd>{ROLE_LABELS[staff.role]}</dd>
             <dt className="text-ink-muted">Mobile</dt><dd>{staff.mobile}</dd>
             <dt className="text-ink-muted">Email</dt><dd>{staff.email ?? '—'}</dd>
-            <dt className="text-ink-muted">Added</dt><dd>{formatDate(staff.addedAt)}</dd>
+            <dt className="text-ink-muted">Added</dt><dd>{formatTimestampDate(staff.addedAt)}</dd>
             <dt className="text-ink-muted">Last sign-in</dt><dd>{staff.lastLoginAt ? formatDateTime(staff.lastLoginAt) : 'Never'}</dd>
             {staff.mustChangePassword && <><dt className="text-ink-muted">Password</dt><dd>Temporary — they will be asked to change it</dd></>}
           </dl>

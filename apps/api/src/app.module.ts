@@ -29,6 +29,7 @@ import { ReportsModule } from './modules/reports/reports.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { StaffModule } from './modules/staff/staff.module';
+import { BillingModule } from './modules/billing/billing.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { StaffModule } from './modules/staff/staff.module';
     ScheduleModule.forRoot(),
     NotificationsModule,
     AuthModule,
+    BillingModule,
     MessModule,
     StudentsModule,
     MealPlansModule,

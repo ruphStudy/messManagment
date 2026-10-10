@@ -8,7 +8,7 @@ import { StarInput } from '@/components/star-input';
 import { AppText } from '@/components/text';
 import { useToast } from '@/components/toast';
 import { api, errorMessage } from '@/lib/api';
-import { colors, radius, spacing } from '@/theme/tokens';
+import { colors, radius, spacing, themed } from '@/theme/tokens';
 
 /** General feedback about the mess. For a specific problem, use "Raise a complaint". */
 export default function GiveFeedbackScreen() {
@@ -58,6 +58,6 @@ export default function GiveFeedbackScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   input: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.control, minHeight: 120, padding: spacing.md, fontSize: 16, color: colors.ink, textAlignVertical: 'top' },
-});
+}));

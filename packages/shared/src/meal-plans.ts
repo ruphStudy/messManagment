@@ -217,3 +217,34 @@ const shortDateFormat = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month
 export function formatShortDate(date: string): string {
   return shortDateFormat.format(new Date(`${date}T00:00:00Z`));
 }
+
+// ── Student plan requests (student chooses, owner/manager approves) ──
+
+export const PlanRequestStatus = { PENDING: 'PENDING', APPROVED: 'APPROVED', REJECTED: 'REJECTED', CANCELLED: 'CANCELLED' } as const;
+export type PlanRequestStatus = (typeof PlanRequestStatus)[keyof typeof PlanRequestStatus];
+export const PLAN_REQUEST_STATUS_LABELS: Record<PlanRequestStatus, string> = { PENDING: 'Requested', APPROVED: 'Approved', REJECTED: 'Rejected', CANCELLED: 'Withdrawn' };
+
+export interface PlanRequestItem {
+  id: string;
+  status: PlanRequestStatus;
+  mealPlanId: string;
+  planName: string;
+  planPricePaise: number;
+  createdAt: string;
+  decidedAt: string | null;
+  rejectReason: string | null;
+  /** Set when approved. */
+  subscriptionId: string | null;
+  /** Start date (YYYY-MM-DD) of the subscription created on approval, if known. */
+  subscriptionStartDate?: string | null;
+  /** Team views only. */
+  student?: { id: string; firstName: string; lastName: string | null; mobile: string };
+}
+
+/** "Approved · Active now" / "Approved · Starts <date>" when the approved plan's start is known; else the plain label. */
+export function planRequestStatusText(r: Pick<PlanRequestItem, 'status' | 'subscriptionStartDate'>, today: string, formatDate: (d: string) => string): string {
+  if (r.status === 'APPROVED' && r.subscriptionStartDate) {
+    return r.subscriptionStartDate <= today ? 'Approved · Active now' : `Approved · Starts ${formatDate(r.subscriptionStartDate)}`;
+  }
+  return PLAN_REQUEST_STATUS_LABELS[r.status];
+}

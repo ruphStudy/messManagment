@@ -1,5 +1,10 @@
 import {
   Activity,
+  Bell,
+  Home,
+  MessageCircleHeart,
+  QrCode,
+  UserRound,
   BarChart3,
   Building2,
   ScrollText,
@@ -60,3 +65,21 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { label: 'Activity / Audit', href: '/admin/audit', icon: ScrollText, permission: Permission.PLATFORM_ADMIN_ACCESS },
   { label: 'System', href: '/admin/system', icon: ServerCog, permission: Permission.PLATFORM_ADMIN_ACCESS },
 ];
+
+/** Student web area (/student). Unlinked students only get Home, Notifications and Profile until their mess adds them. */
+const STUDENT_NAV_ITEMS: (NavItem & { linkedOnly?: boolean })[] = [
+  { label: 'Home', href: '/student', icon: Home },
+  { label: 'Menu', href: '/student/menu', icon: UtensilsCrossed, linkedOnly: true },
+  { label: 'Meal QR', href: '/student/qr', icon: QrCode, linkedOnly: true },
+  { label: 'Meal plans', href: '/student/plans', icon: ClipboardList, linkedOnly: true },
+  { label: 'Pause', href: '/student/pause', icon: PauseCircle, linkedOnly: true },
+  { label: 'Payments', href: '/student/payments', icon: Wallet, linkedOnly: true },
+  { label: 'Notifications', href: '/student/notifications', icon: Bell },
+  { label: 'Feedback', href: '/student/feedback', icon: MessageCircleHeart, linkedOnly: true },
+  { label: 'Complaints', href: '/student/complaints', icon: MessageSquareWarning, linkedOnly: true },
+  { label: 'Profile', href: '/student/profile', icon: UserRound },
+];
+
+export function studentNav(linked: boolean): NavItem[] {
+  return STUDENT_NAV_ITEMS.filter((i) => linked || !i.linkedOnly);
+}

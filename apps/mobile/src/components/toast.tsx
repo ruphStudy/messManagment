@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, radius, spacing } from '@/theme/tokens';
+import { colors, radius, spacing, themed } from '@/theme/tokens';
 import { AppText } from './text';
 
 type Tone = 'success' | 'error' | 'info';
@@ -12,7 +12,7 @@ interface ToastApi {
 
 const Ctx = createContext<ToastApi | null>(null);
 
-const toneColors: Record<Tone, string> = { success: colors.success, error: colors.danger, info: colors.ink };
+const toneColors: Record<Tone, string> = themed(() => ({ success: colors.success, error: colors.danger, info: colors.ink }));
 
 /** Snackbar shown above the bottom safe area. One message at a time. */
 export function ToastProvider({ children }: { children: ReactNode }) {

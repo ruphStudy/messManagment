@@ -8,10 +8,12 @@ import { NotLinkedCard } from '@/components/not-linked';
 import { ProfileEditForm } from '@/components/profile-edit-form';
 import { ErrorState, FullScreenLoader } from '@/components/states';
 import { AppText } from '@/components/text';
+import { ThemeSelector } from '@/components/theme-selector';
+import { useStudentMess } from '@/lib/student-mess';
 import { useToast } from '@/components/toast';
 import { useAuth } from '@/lib/auth';
 import { formatDate, studentName, useStudentProfile } from '@/lib/student-profile';
-import { colors, spacing } from '@/theme/tokens';
+import { colors, spacing, themed } from '@/theme/tokens';
 
 const phone = (mobile: string) => `${DEFAULT_COUNTRY_CODE} ${mobile}`;
 
@@ -69,6 +71,7 @@ function LinkedProfile({ profile, onEdit }: { profile: StudentSelfProfile; onEdi
 export default function ProfileScreen() {
   const { session, logout } = useAuth();
   const { data, loading, error, reload, update } = useStudentProfile();
+  const { memberships, current: currentMess, openChooser } = useStudentMess();
   const toast = useToast();
   const [editing, setEditing] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -125,13 +128,26 @@ export default function ProfileScreen() {
       {profile && !editing && <Button title="Rate a meal" variant="secondary" onPress={() => router.push('/rate-meal')} />}
       {profile && !editing && <Button title="Give feedback" variant="secondary" onPress={() => router.push('/give-feedback')} />}
       {profile && !editing && <Button title="My complaints" variant="secondary" onPress={() => router.push('/complaints')} />}
+      {!editing && memberships.length > 1 && (
+        <Card>
+          <AppText variant="label" muted>{`MESSES (${memberships.length})`}</AppText>
+          <AppText>Using: <AppText style={{ fontWeight: '700' }}>{currentMess?.messName ?? '—'}</AppText></AppText>
+          <Button title="Switch mess" variant="secondary" onPress={openChooser} />
+        </Card>
+      )}
+      {!editing && (
+        <Card>
+          <AppText variant="label" muted>APPEARANCE</AppText>
+          <ThemeSelector />
+        </Card>
+      )}
       {!editing && <Button title="Notification settings" variant="secondary" onPress={() => router.push('/notification-settings')} />}
       {!editing && <Button title="Sign out" variant="secondary" onPress={confirmLogout} loading={loggingOut} />}
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   header: { alignItems: 'center', gap: spacing.sm, marginVertical: spacing.md },
   avatar: {
     width: 72,
@@ -143,4 +159,4 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.sm, gap: spacing.md },
   value: { fontWeight: '600', flexShrink: 1, textAlign: 'right' },
-});
+}));

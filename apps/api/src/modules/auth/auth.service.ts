@@ -5,6 +5,7 @@ import { APP_CONFIG, AppConfig } from '../../config/app-config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AppException } from '../../common/http/app.exception';
 import { toAuthContext, toAuthUser } from '../users/user.mapper';
+import { BillingService } from '../billing/billing.service';
 import { AuthContextService } from './auth-context.service';
 import { DUMMY_PASSWORD_HASH, hashPassword, verifyPassword } from './crypto.util';
 import { StudentLinkService } from '../students/student-link.service';
@@ -30,6 +31,7 @@ export class AuthService {
     private readonly otp: OtpService,
     private readonly studentLinker: StudentLinkService,
     private readonly audit: AuditService,
+    private readonly billing: BillingService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
@@ -38,10 +40,12 @@ export class AuthService {
       where: { OR: [{ mobile: dto.mobile }, { email: dto.email }] },
       select: { mobile: true, email: true },
     });
+    // Never a second account (or a role change) for a known number/email: the person signs in instead.
+    // The message doesn't say what kind of account it is.
     const fields: Record<string, string[]> = {};
-    if (existing.some((u) => u.mobile === dto.mobile)) fields.mobile = ['This mobile number is already registered'];
-    if (existing.some((u) => u.email === dto.email)) fields.email = ['This email is already registered'];
-    if (Object.keys(fields).length) throw AppException.conflict('An account already exists with these details', fields);
+    if (existing.some((u) => u.mobile === dto.mobile)) fields.mobile = ['Already registered — please sign in'];
+    if (existing.some((u) => u.email === dto.email)) fields.email = ['Already registered — please sign in'];
+    if (Object.keys(fields).length) throw this.accountExists(fields);
 
     try {
       const user = await this.prisma.user.create({
@@ -57,7 +61,7 @@ export class AuthService {
       return { user: toAuthUser(user) };
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        throw AppException.conflict('An account already exists with these details');
+        throw this.accountExists();
       }
       throw error;
     }
@@ -76,7 +80,7 @@ export class AuthService {
     }
     this.authContext.assertActive(user);
     if (!PASSWORD_LOGIN_ROLES.includes(user.role)) {
-      throw AppException.forbidden('Students sign in with the mobile app using their phone number', ErrorCode.WRONG_APP);
+      throw AppException.forbidden('Student accounts sign in with a one-time code sent to your mobile', ErrorCode.OTP_SIGN_IN_REQUIRED);
     }
 
     const auth = await this.authContext.build(user, '');
@@ -117,7 +121,7 @@ export class AuthService {
     if (!refreshToken) throw AppException.unauthorized('Your session has expired', ErrorCode.SESSION_EXPIRED);
     const { user, issued } = await this.sessions.rotate(refreshToken);
     const auth = await this.authContext.build(user, issued.sessionId);
-    return { response: this.toResponse(toAuthContext(auth), issued), session: issued };
+    return { response: this.toResponse(await this.describe(toAuthContext(auth)), issued), session: issued };
   }
 
   async logout(refreshToken: string | undefined) {
@@ -176,17 +180,55 @@ export class AuthService {
   }
 
   private assertPasswordAccount(user: User) {
-    if (!PASSWORD_LOGIN_ROLES.includes(user.role)) throw AppException.forbidden('Use the student app to manage your profile', ErrorCode.WRONG_APP);
+    if (!PASSWORD_LOGIN_ROLES.includes(user.role)) throw AppException.forbidden('Student accounts manage their profile from the student profile page', ErrorCode.OTP_SIGN_IN_REQUIRED);
+  }
+
+  private accountExists(fields?: Record<string, string[]>) {
+    return new AppException(HttpStatus.CONFLICT, ErrorCode.ACCOUNT_EXISTS, 'An account already exists for this mobile number or email. Please sign in.', fields);
+  }
+
+  /**
+   * Session context for clients to route on (any role, any device): identity, membership, and for students
+   * every mess they are linked to (a student may be in several); the client selects one (x-mess-id).
+   */
+  async describe(context: AuthContext): Promise<AuthContext> {
+    if (context.role !== Role.STUDENT) {
+      // Team: MessMate access, so apps can show "subscription required" up front (the API enforces it anyway).
+      const billing = context.membership ? await this.billing.summary(context.membership.mess.id) : null;
+      return { ...context, student: null, billing: billing && { status: billing.status, accessAllowed: billing.accessAllowed, accessUntil: billing.accessUntil } };
+    }
+    // Link any record the mess created for this verified mobile since the last check (sign-in, refresh,
+    // /auth/me, "Check again"). Only unlinked rows with the exact normalized mobile; never reassigns a userId.
+    await this.studentLinker.linkUser({ id: context.user.id, mobile: context.user.mobile, role: context.user.role });
+    const records = await this.prisma.messStudent.findMany({
+      where: { userId: context.user.id, status: { not: 'ARCHIVED' } },
+      orderBy: [{ status: 'asc' }, { joiningDate: 'desc' }],
+      select: { id: true, status: true, mess: { select: { id: true, name: true, status: true } } },
+    });
+    const memberships = records
+      .map((r) => ({ studentId: r.id, messId: r.mess.id, messName: r.mess.name, status: r.status, messStatus: r.mess.status, usable: r.status === 'ACTIVE' && r.mess.status === 'ACTIVE' }))
+      .sort((a, b) => Number(b.usable) - Number(a.usable));
+    const usable = memberships.filter((m) => m.usable);
+    const fallback = usable.length === 1 ? usable[0] : usable.length === 0 && memberships.length === 1 ? memberships[0] : null;
+    return {
+      ...context,
+      student: {
+        linked: memberships.length > 0,
+        memberships,
+        defaultMessId: fallback?.messId ?? null,
+        mess: fallback ? { id: fallback.messId, name: fallback.messName, status: fallback.messStatus } : null,
+      },
+    };
   }
 
   private async startSession(user: User, meta: SessionMeta): Promise<AuthResult> {
     const session = await this.sessions.create(user.id, meta);
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
     const auth = await this.authContext.build(user, session.sessionId);
-    return { response: this.toResponse(toAuthContext(auth), session), session };
+    return { response: this.toResponse(await this.describe(toAuthContext(auth)), session), session };
   }
 
-  private toResponse(context: ReturnType<typeof toAuthContext>, session: IssuedSession): AuthResponse {
+  private toResponse(context: AuthContext, session: IssuedSession): AuthResponse {
     return {
       ...context,
       accessToken: session.accessToken,
@@ -196,8 +238,9 @@ export class AuthService {
 
   private assertStudentAccount(user: User) {
     this.authContext.assertActive(user);
+    // Password accounts (owner/team/admin) never become students through OTP signup; their role is untouched.
     if (user.role !== Role.STUDENT) {
-      throw AppException.forbidden('This number belongs to a mess team account. Please use the web app.', ErrorCode.WRONG_APP);
+      throw AppException.forbidden('This number already has an account that signs in with a password. Please sign in with your mobile number and password.', ErrorCode.PASSWORD_SIGN_IN_REQUIRED);
     }
   }
 }

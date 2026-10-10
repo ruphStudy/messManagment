@@ -9,7 +9,7 @@ import { AppText } from '@/components/text';
 import { useToast } from '@/components/toast';
 import { errorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { colors, spacing, TOUCH_TARGET } from '@/theme/tokens';
+import { colors, spacing, TOUCH_TARGET, themed } from '@/theme/tokens';
 
 export default function OtpScreen() {
   const params = useLocalSearchParams<{ mobile: string; resendIn?: string; devOtp?: string }>();
@@ -111,9 +111,9 @@ export default function OtpScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   header: { gap: spacing.sm, marginBottom: spacing.sm },
   devCard: { backgroundColor: colors.infoSoft, borderColor: colors.infoSoft, alignItems: 'center' },
   resendRow: { alignItems: 'center', minHeight: TOUCH_TARGET, justifyContent: 'center' },
   change: { alignItems: 'center', minHeight: TOUCH_TARGET, justifyContent: 'center' },
-});
+}));

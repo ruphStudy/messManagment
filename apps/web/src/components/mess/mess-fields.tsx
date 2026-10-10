@@ -5,6 +5,8 @@ import {
   FOOD_TYPE_LABELS,
   FoodType,
   formatTime12,
+  citiesForState,
+  findCity,
   INDIAN_STATES,
   MEAL_LABELS,
   MESS_TYPE_LABELS,
@@ -27,6 +29,12 @@ export interface MessFieldsProps {
 const messTypeOptions = Object.values(MessType).map((value) => ({ value, label: MESS_TYPE_LABELS[value] }));
 const foodTypeOptions = Object.values(FoodType).map((value) => ({ value, label: FOOD_TYPE_LABELS[value] }));
 const stateOptions = INDIAN_STATES.map((s) => ({ value: s, label: s }));
+/** Cities of the state; an older saved city not in the list is kept as an option so it is shown, not lost. */
+const cityOptions = (state: string, current: string) => {
+  const cities = citiesForState(state);
+  const legacy = current && !findCity(state, current) ? [{ value: current, label: `${current} (saved)` }] : [];
+  return [...legacy, ...cities.map((c) => ({ value: c, label: c }))];
+};
 
 export function MessBasicFields({ values, errors, setField, disabled }: MessFieldsProps) {
   return (
@@ -92,15 +100,6 @@ export function MessLocationFields({ values, errors, setField, disabled }: MessF
         onChange={(e) => setField('address', e.target.value)}
       />
       <div className="grid gap-4 sm:grid-cols-3">
-        <Input
-          id="city"
-          label="City"
-          required
-          disabled={disabled}
-          value={values.city}
-          error={errors.city}
-          onChange={(e) => setField('city', e.target.value)}
-        />
         <Select
           id="state"
           label="State"
@@ -110,7 +109,22 @@ export function MessLocationFields({ values, errors, setField, disabled }: MessF
           disabled={disabled}
           value={values.state}
           error={errors.state}
-          onChange={(e) => setField('state', e.target.value)}
+          onChange={(e) => {
+            if (e.target.value === values.state) return;
+            setField('state', e.target.value);
+            setField('city', '');
+          }}
+        />
+        <Select
+          id="city"
+          label="City"
+          placeholder={values.state ? 'Select city (type to jump)' : 'Select a state first'}
+          options={cityOptions(values.state, values.city)}
+          required
+          disabled={disabled || !values.state}
+          value={values.city}
+          error={errors.city}
+          onChange={(e) => setField('city', e.target.value)}
         />
         <Input
           id="pincode"

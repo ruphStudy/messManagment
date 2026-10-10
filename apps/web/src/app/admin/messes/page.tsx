@@ -2,15 +2,15 @@
 
 import { Suspense } from 'react';
 import { Building2, X } from 'lucide-react';
-import { MESS_TYPE_LABELS, MessStatus, type AdminMessListItem } from '@mess/shared';
+import { MESS_TYPE_LABELS, MessStatus, PLATFORM_SUBSCRIPTION_STATUS_LABELS, type AdminMessListItem } from '@mess/shared';
 import { ListResult } from '@/components/admin/list-result';
 import { Badge } from '@/components/ui/badge';
 import { DataTable } from '@/components/ui/data-table';
 import { PageHeader } from '@/components/ui/page-header';
 import { SearchInput } from '@/components/ui/search-input';
 import { Select } from '@/components/ui/select';
-import { MESS_STATUS_UI } from '@/lib/admin';
-import { formatDate } from '@/lib/format';
+import { BILLING_STATUS_TONE, MESS_STATUS_UI } from '@/lib/admin';
+import { formatTimestampDate } from '@/lib/format';
 import { useListParams } from '@/lib/use-list-params';
 import { usePagedList } from '@/lib/use-paged-list';
 
@@ -53,7 +53,8 @@ function MessesScreen() {
               { header: 'Type', cell: (m) => MESS_TYPE_LABELS[m.messType] },
               { header: 'Active students', cell: (m) => m.activeStudents, className: 'text-right' },
               { header: 'Status', cell: (m) => <Badge tone={MESS_STATUS_UI[m.status].tone}>{MESS_STATUS_UI[m.status].label}</Badge> },
-              { header: 'Created', cell: (m) => formatDate(m.createdAt), className: 'whitespace-nowrap' },
+              { header: 'MessMate plan', cell: (m) => <Badge tone={BILLING_STATUS_TONE[m.billingStatus]}>{PLATFORM_SUBSCRIPTION_STATUS_LABELS[m.billingStatus]}</Badge> },
+              { header: 'Created', cell: (m) => formatTimestampDate(m.createdAt), className: 'whitespace-nowrap' },
             ]}
           />
         )}

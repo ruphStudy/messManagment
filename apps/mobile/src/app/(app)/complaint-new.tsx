@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Alert, Image, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Image, Linking, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +16,7 @@ import { Card, Screen } from '@/components/layout';
 import { AppText } from '@/components/text';
 import { useToast } from '@/components/toast';
 import { api, errorMessage } from '@/lib/api';
-import { colors, radius, spacing, TOUCH_TARGET } from '@/theme/tokens';
+import { colors, radius, spacing, TOUCH_TARGET, themed } from '@/theme/tokens';
 
 /** Not security-sensitive: only stops a double-tap/retry from creating two complaints. */
 const newKey = () => `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
@@ -32,7 +32,16 @@ export default function NewComplaintScreen() {
 
   const pick = async (camera: boolean) => {
     const permission = camera ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) return toast.show('Permission needed to add a photo', 'error');
+    if (!permission.granted) {
+      // Permanently denied: the OS won't ask again, so point to Settings instead of failing silently.
+      if (!permission.canAskAgain) {
+        return Alert.alert(camera ? 'Camera access is off' : 'Photo access is off', 'You can allow it in Settings, or send the complaint without a photo.', [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => void Linking.openSettings() },
+        ]);
+      }
+      return toast.show('Permission needed to add a photo', 'error');
+    }
     const result = await (camera ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync)({ mediaTypes: ['images'], quality: 0.6 });
     if (result.canceled) return;
     const asset = result.assets[0];
@@ -115,7 +124,7 @@ export default function NewComplaintScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: { minHeight: TOUCH_TARGET - 6, paddingHorizontal: spacing.md, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.border, justifyContent: 'center', backgroundColor: colors.surface },
   chipOn: { backgroundColor: colors.brand600, borderColor: colors.brand600 },
@@ -123,4 +132,4 @@ const styles = StyleSheet.create({
   addPhoto: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: TOUCH_TARGET, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.border, borderRadius: radius.control, paddingHorizontal: spacing.md },
   photoRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   thumb: { width: 88, height: 88, borderRadius: radius.control },
-});
+}));

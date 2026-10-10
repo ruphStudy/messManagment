@@ -1,4 +1,4 @@
-import { API_PREFIX, CLIENT_HEADER, ClientType, ErrorCode, type ApiErrorBody, type ApiSuccess, type AuthResponse } from '@mess/shared';
+import { API_PREFIX, CLIENT_HEADER, ClientType, STUDENT_MESS_HEADER, ErrorCode, type ApiErrorBody, type ApiSuccess, type AuthResponse, friendlyErrorMessage } from '@mess/shared';
 import { tokenStorage } from './token-storage';
 
 const BASE_URL = `${process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4100'}${API_PREFIX}`;
@@ -41,6 +41,7 @@ interface RequestOptions {
 async function send<T>(path: string, { method = 'GET', body, auth = true }: RequestOptions): Promise<ApiSuccess<T>> {
   const isForm = body instanceof FormData;
   const headers: Record<string, string> = { Accept: 'application/json', [CLIENT_HEADER]: ClientType.MOBILE };
+  if (studentMessId) headers[STUDENT_MESS_HEADER] = studentMessId;
   if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
   if (auth && accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
@@ -91,7 +92,8 @@ export function refreshSession(): Promise<AuthResponse | null> {
       await storeSession(res);
       return res;
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
+      // A disabled account ends the session like an expired one (no restore loop / connection error).
+      if (error instanceof ApiError && (error.status === 401 || error.code === ErrorCode.ACCOUNT_DISABLED)) {
         await clearSession();
         return null;
       }
@@ -132,11 +134,17 @@ export async function logoutRequest() {
   }
 }
 
+/** Student multi-mess: the selected mess, sent as x-mess-id (verified by the API). */
+let studentMessId: string | null = null;
+export function setStudentMessId(id: string | null) {
+  studentMessId = id;
+}
+
 /** URL + auth header for private files (e.g. complaint photos) shown with <Image>. */
 export function authorizedFileSource(fileId: string) {
-  return { uri: `${BASE_URL}/files/${fileId}`, headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined };
+  return { uri: `${BASE_URL}/files/${fileId}`, headers: { ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}), ...(studentMessId ? { [STUDENT_MESS_HEADER]: studentMessId } : {}) } };
 }
 
 export function errorMessage(error: unknown) {
-  return error instanceof ApiError ? error.message : 'Something went wrong. Please try again.';
+  return error instanceof ApiError ? friendlyErrorMessage(error.code, error.message) : 'Something went wrong. Please try again.';
 }

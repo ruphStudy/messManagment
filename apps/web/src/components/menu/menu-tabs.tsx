@@ -9,7 +9,7 @@ export function MenuTabs({ active, date }: { active: 'day' | 'week'; date: strin
       aria-current={active === key ? 'page' : undefined}
       className={cn(
         'inline-flex min-h-10 items-center rounded-full px-4 text-sm font-semibold',
-        active === key ? 'bg-ink text-white' : 'text-ink-muted hover:bg-slate-100',
+        active === key ? 'bg-ink text-white dark:text-canvas' : 'text-ink-muted hover:bg-slate-100',
       )}
     >
       {label}

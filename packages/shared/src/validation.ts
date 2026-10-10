@@ -101,3 +101,12 @@ export function todayDateString(): string {
   const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
   return local.toISOString().slice(0, 10);
 }
+
+/** "Rup Hirulkar" → "RH", "Rajesh" → "R", "" → "?" (max 2; first + last word). For initials avatars. */
+export function personInitials(name: string | null | undefined): string {
+  const words = (name ?? '').trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return '?';
+  const first = words[0][0];
+  const last = words.length > 1 ? words[words.length - 1][0] : '';
+  return (first + last).toUpperCase();
+}

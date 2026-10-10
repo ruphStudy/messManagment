@@ -1,13 +1,13 @@
 import { StyleSheet, View } from 'react-native';
 import { MEAL_KEYS, MEAL_LABELS, type MealType, type TodayMealState } from '@mess/shared';
-import { colors, radius, spacing } from '@/theme/tokens';
+import { colors, radius, spacing, themed } from '@/theme/tokens';
 import { AppText } from './text';
 
-const STATE: Record<Exclude<TodayMealState, 'NOT_INCLUDED'>, { label: string; bg: string; fg: string }> = {
+const STATE: Record<Exclude<TodayMealState, 'NOT_INCLUDED'>, { label: string; bg: string; fg: string }> = themed(() => ({
   AVAILABLE: { label: 'Available', bg: colors.successSoft, fg: colors.success },
   PAUSED: { label: 'Paused', bg: colors.brand100, fg: colors.brand700 },
   SERVED: { label: 'Served ✓', bg: colors.infoSoft, fg: colors.info },
-};
+}));
 
 /** "Lunch · Paused   Dinner · Available" for today's meals in the student's plan. */
 export function TodayMealsStrip({ meals }: { meals: Record<MealType, TodayMealState> }) {

@@ -32,15 +32,18 @@ export const MESS_TYPE_LABELS: Record<MessType, string> = {
   OTHER: 'Other',
 };
 
+/** What the mess serves (informational). VEG_NON_VEG = both; existing values keep their meaning. */
 export const FoodType = {
   VEG: 'VEG',
+  NON_VEG: 'NON_VEG',
   VEG_NON_VEG: 'VEG_NON_VEG',
 } as const;
 export type FoodType = (typeof FoodType)[keyof typeof FoodType];
 
 export const FOOD_TYPE_LABELS: Record<FoodType, string> = {
   VEG: 'Veg only',
-  VEG_NON_VEG: 'Veg + Non-veg',
+  NON_VEG: 'Non-Veg only',
+  VEG_NON_VEG: 'Veg + Non-Veg',
 };
 
 export const ClientType = {

@@ -9,7 +9,7 @@ import { ErrorState, FullScreenLoader } from '@/components/states';
 import { AppText } from '@/components/text';
 import { useAuth } from '@/lib/auth';
 import { menuDayLabel, useStudentMenu } from '@/lib/use-student-menu';
-import { colors, radius, spacing, TOUCH_TARGET } from '@/theme/tokens';
+import { colors, radius, spacing, TOUCH_TARGET, themed } from '@/theme/tokens';
 
 const TABS: { key: StudentMenuRange; label: string }[] = [
   { key: StudentMenuRange.TODAY, label: 'Today' },
@@ -101,10 +101,10 @@ export default function MenuScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   tabs: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, padding: 4 },
   tab: { flex: 1, minHeight: TOUCH_TARGET - 8, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   tabActive: { backgroundColor: colors.brand600 },
   tabLabel: { fontWeight: '600' },
   dayHeader: { flexDirection: 'row', alignItems: 'center' },
-});
+}));

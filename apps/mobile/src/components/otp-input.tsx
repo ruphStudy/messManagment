@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { OTP_LENGTH } from '@mess/shared';
-import { colors, radius } from '@/theme/tokens';
+import { colors, radius, themed } from '@/theme/tokens';
 import { AppText } from './text';
 
 interface OtpInputProps {
@@ -46,7 +46,7 @@ export function OtpInput({ value, onChange, error, autoFocus }: OtpInputProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
   cell: {
     flex: 1,
@@ -62,4 +62,4 @@ const styles = StyleSheet.create({
   cellActive: { borderColor: colors.brand500 },
   cellError: { borderColor: colors.danger },
   hidden: { position: 'absolute', opacity: 0, width: 1, height: 1 },
-});
+}));

@@ -3,7 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { ErrorCode } from '@mess/shared';
 import { AuthContextService } from '../../modules/auth/auth-context.service';
-import { IS_PUBLIC_KEY } from '../decorators/auth.decorators';
+import { ALLOW_PENDING_PASSWORD_KEY, IS_PUBLIC_KEY } from '../decorators/auth.decorators';
 import { AppException } from '../http/app.exception';
 import type { AccessTokenPayload, AuthedRequest } from '../auth.types';
 
@@ -32,6 +32,12 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     req.auth = await this.authContext.loadForSession(payload.sid, payload.sub);
+
+    // Temporary password: only the password-change flow is usable until it is replaced (enforced here, not just in the UI).
+    if (req.auth.user.mustChangePassword) {
+      const allowed = this.reflector.getAllAndOverride<boolean>(ALLOW_PENDING_PASSWORD_KEY, [context.getHandler(), context.getClass()]);
+      if (!allowed) throw AppException.forbidden('Please set a new password to continue', ErrorCode.PASSWORD_CHANGE_REQUIRED);
+    }
     return true;
   }
 }

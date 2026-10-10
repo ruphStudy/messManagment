@@ -36,7 +36,7 @@ function LoginForm() {
   return (
     <>
       <h1 className="text-display font-bold">Welcome back</h1>
-      <p className="mt-1 text-ink-muted">Sign in to manage your mess.</p>
+      <p className="mt-1 text-ink-muted">Sign in to MessMate.</p>
 
       {registered && (
         <Alert tone="success" className="mt-5">
@@ -82,8 +82,13 @@ function LoginForm() {
         </Button>
       </form>
 
+      <Link href="/login/otp" className="mt-4 flex min-h-11 w-full items-center justify-center rounded-control border border-border text-sm font-semibold hover:bg-canvas">
+        Student? Sign in with a one-time code
+      </Link>
+      <p className="mt-4 text-center text-sm text-ink-muted">Manager or staff? Sign in using the mobile number and password your mess owner set up for you.</p>
+
       <p className="mt-6 text-center text-sm text-ink-muted">
-        New mess owner?{' '}
+        New here?{' '}
         <Link href="/register" className="font-semibold text-brand-700 hover:underline">
           Create an account
         </Link>

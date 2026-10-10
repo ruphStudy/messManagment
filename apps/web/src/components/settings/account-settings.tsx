@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/toast';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth/auth-context';
 import { useForm } from '@/lib/use-form';
+import { ThemeSelector } from '@/components/ui/theme-selector';
 
 function ProfileCard({ session }: { session: AuthContext }) {
   const { reload } = useAuth();
@@ -102,8 +103,12 @@ export function AccountSettings() {
       {session.user.mustChangePassword && (
         <Alert tone="danger">You signed in with a temporary password. Please set your own password to continue.</Alert>
       )}
-      <ProfileCard session={session} />
+      {!session.user.mustChangePassword && <ProfileCard session={session} />}
       <PasswordCard />
+      <Card>
+        <CardHeader title="Appearance" description="Saved on this browser. System follows your device setting." />
+        <div className="max-w-md"><ThemeSelector /></div>
+      </Card>
     </div>
   );
 }

@@ -153,7 +153,7 @@ function PausesScreen() {
             key={key}
             onClick={() => list.setParams({ view: key === 'list' ? null : key })}
             aria-current={view === key ? 'page' : undefined}
-            className={cn('inline-flex min-h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold', view === key ? 'bg-ink text-white' : 'text-ink-muted hover:bg-slate-100')}
+            className={cn('inline-flex min-h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold', view === key ? 'bg-ink text-white dark:text-canvas' : 'text-ink-muted hover:bg-slate-100')}
           >
             <Icon className="size-4" aria-hidden /> {label}
           </button>

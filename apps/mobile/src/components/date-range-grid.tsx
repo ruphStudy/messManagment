@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { addDays, PAUSE_MAX_DAYS } from '@mess/shared';
-import { colors, radius, spacing } from '@/theme/tokens';
+import { colors, radius, spacing, themed } from '@/theme/tokens';
 import { AppText } from './text';
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -65,7 +65,7 @@ export function DateRangeGrid({ today, from, to, onChange }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   row: { flexDirection: 'row' },
   head: { width: `${100 / 7}%`, textAlign: 'center', marginBottom: spacing.xs },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
@@ -74,4 +74,4 @@ const styles = StyleSheet.create({
   edge: { backgroundColor: colors.brand600 },
   day: { fontWeight: '600' },
   month: { fontSize: 9, lineHeight: 11, color: colors.inkMuted },
-});
+}));

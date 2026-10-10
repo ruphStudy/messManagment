@@ -17,6 +17,8 @@ import {
   type AdminRecordType,
 } from '@mess/shared';
 import { ActivityList } from '@/components/admin/activity-list';
+import { BillingPanel } from '@/components/admin/billing-panel';
+import { Avatar } from '@/components/ui/avatar';
 import { ListResult } from '@/components/admin/list-result';
 import { StatGrid } from '@/components/admin/stat-grid';
 import { StatusChangeDialog } from '@/components/admin/status-change-dialog';
@@ -31,7 +33,7 @@ import { SearchInput } from '@/components/ui/search-input';
 import { ErrorState } from '@/components/ui/states';
 import { api, errorMessage } from '@/lib/api';
 import { MESS_STATUS_UI } from '@/lib/admin';
-import { formatDate, formatDateTime } from '@/lib/format';
+import { formatTimestampDate, formatDateTime } from '@/lib/format';
 import { useListParams } from '@/lib/use-list-params';
 import { usePagedList } from '@/lib/use-paged-list';
 
@@ -93,7 +95,7 @@ function MessDetailScreen() {
       <Link href="/admin/messes" className="mb-2 inline-flex min-h-9 items-center gap-1 text-sm font-medium text-brand-700 hover:underline"><ArrowLeft className="size-4" aria-hidden /> All messes</Link>
       <PageHeader
         title={mess.name}
-        description={`${mess.city}, ${mess.state} · since ${formatDate(mess.createdAt)}`}
+        description={`${mess.city}, ${mess.state} · since ${formatTimestampDate(mess.createdAt)}`}
         actions={
           suspended ? <Button onClick={() => setDialog('reactivate')}>Reactivate mess</Button> : <Button variant="danger" onClick={() => setDialog('suspend')}>Suspend mess</Button>
         }
@@ -134,6 +136,7 @@ function MessDetailScreen() {
           <ul className="text-sm">
             {data.team.map((t) => (
               <li key={t.id} className="flex min-h-9 items-center gap-2">
+                <Avatar name={t.name} className="size-7" />
                 <Link href={`/admin/users/${t.id}`} className="text-brand-700 hover:underline">{t.name}</Link>
                 <span className="text-ink-muted">{ROLE_LABELS[t.role]}{t.status !== 'ACTIVE' && ' · removed'}</span>
               </li>
@@ -166,6 +169,7 @@ function MessDetailScreen() {
       />
 
       <div className="mt-6 grid gap-4">
+        <BillingPanel messId={mess.id} />
         <Records messId={mess.id} />
         <Card>
           <CardHeader title="Recent admin activity" action={<Link href={`/admin/audit?messId=${mess.id}`} className="text-sm font-medium text-brand-700 hover:underline">All →</Link>} />

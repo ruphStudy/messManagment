@@ -1,4 +1,4 @@
-import { API_PREFIX, type ApiErrorBody, type ApiSuccess, type AuthResponse, ErrorCode } from '@mess/shared';
+import { API_PREFIX, STUDENT_MESS_HEADER, type ApiErrorBody, type ApiSuccess, type AuthResponse, ErrorCode, friendlyErrorMessage } from '@mess/shared';
 
 export const NETWORK_ERROR = 'NETWORK_ERROR';
 
@@ -26,6 +26,12 @@ export function setAccessToken(token: string | null) {
   accessToken = token;
 }
 
+// Student multi-mess: the selected mess, sent as x-mess-id (the API verifies the student belongs to it).
+let studentMessId: string | null = null;
+export function setStudentMessId(id: string | null) {
+  studentMessId = id;
+}
+
 /** Called when a request fails because the session can no longer be refreshed. */
 export function onSessionExpired(handler: (() => void) | null) {
   sessionExpiredHandler = handler;
@@ -44,6 +50,7 @@ async function send<T>(path: string, { method = 'GET', body, auth = true, signal
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
   if (auth && accessToken) headers.Authorization = `Bearer ${accessToken}`;
+  if (studentMessId) headers[STUDENT_MESS_HEADER] = studentMessId;
 
   let res: Response;
   try {
@@ -66,6 +73,10 @@ async function send<T>(path: string, { method = 'GET', body, auth = true, signal
     if (!error && res.status >= 500) {
       throw new ApiError(res.status, NETWORK_ERROR, 'The server is not responding. Please try again shortly.');
     }
+    // Temporary password: any blocked call sends the user to the password form (the API enforces this too).
+    if (error?.code === ErrorCode.PASSWORD_CHANGE_REQUIRED && typeof window !== 'undefined' && window.location.pathname !== '/settings') {
+      window.location.assign('/settings?tab=account');
+    }
     throw new ApiError(res.status, error?.code ?? ErrorCode.INTERNAL_ERROR, error?.message ?? 'Something went wrong', error?.fields);
   }
   return json as ApiSuccess<T>;
@@ -79,7 +90,8 @@ export function refreshSession(): Promise<AuthResponse | null> {
       return res;
     })
     .catch((error: unknown) => {
-      if (error instanceof ApiError && error.status === 401) {
+      // A disabled account ends the session like an expired one (no restore loop / connection error).
+      if (error instanceof ApiError && (error.status === 401 || error.code === ErrorCode.ACCOUNT_DISABLED)) {
         setAccessToken(null);
         return null;
       }
@@ -119,13 +131,17 @@ export function isAbortError(error: unknown) {
 
 /** User-facing message for any thrown value. */
 export function errorMessage(error: unknown): string {
-  if (error instanceof ApiError) return error.message;
+  if (error instanceof ApiError) return friendlyErrorMessage(error.code, error.message);
   return 'Something went wrong. Please try again.';
 }
 
 /** Authorized binary download (e.g. a complaint photo) as an object URL. Caller revokes it. */
 export async function apiObjectUrl(path: string): Promise<string> {
-  const get = () => fetch(`${API_PREFIX}${path}`, { headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {}, credentials: 'same-origin' });
+  const get = () =>
+    fetch(`${API_PREFIX}${path}`, {
+      headers: { ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}), ...(studentMessId ? { [STUDENT_MESS_HEADER]: studentMessId } : {}) },
+      credentials: 'same-origin',
+    });
   let res = await get();
   if (res.status === 401 && (await refreshSession())) res = await get();
   if (!res.ok) throw new ApiError(res.status, ErrorCode.FILE_NOT_FOUND, 'Could not load the file');

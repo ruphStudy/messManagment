@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ChevronRight, Repeat, SearchX, X } from 'lucide-react';
 import { SubscriptionStatus, type MealPlan, type SubscriptionListItem } from '@mess/shared';
 import { mealsLeftLabel, SubscriptionStatusBadge } from '@/components/subscriptions/subscription-badges';
+import { PlanRequestsCard } from '@/components/subscriptions/plan-requests-card';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/loader';
 import { PageHeader } from '@/components/ui/page-header';
@@ -18,6 +19,7 @@ import { cn } from '@/lib/cn';
 import { formatDate, formatMobile, fullName } from '@/lib/format';
 import { useListParams } from '@/lib/use-list-params';
 import { usePagedList } from '@/lib/use-paged-list';
+import { PersonName } from '@/components/ui/avatar';
 
 const PAGE_SIZE = 20;
 const VIEWS = [
@@ -58,6 +60,7 @@ function SubscriptionsScreen() {
   return (
     <>
       <PageHeader title="Subscriptions" description={result ? `${result.meta.total} found` : 'Who is on which plan'} />
+      <PlanRequestsCard onApproved={retry} />
 
       <div role="tablist" aria-label="Subscription status" className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
         {VIEWS.map((v) => (
@@ -129,7 +132,7 @@ function SubscriptionsScreen() {
                 {rows.map((s) => (
                   <tr key={s.id} onClick={() => router.push(`/subscriptions/${s.id}`)} className="cursor-pointer hover:bg-canvas">
                     <td className="px-4 py-3">
-                      <p className="font-semibold">{fullName(s.student)}</p>
+                      <PersonName name={fullName(s.student)} className="font-semibold" />
                       <p className="text-xs text-ink-muted">{formatMobile(s.student.mobile)}</p>
                     </td>
                     <td className="max-w-48 truncate px-4 py-3">{s.plan.name}</td>
@@ -157,7 +160,7 @@ function SubscriptionsScreen() {
                 <Link href={`/subscriptions/${s.id}`} className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 active:bg-canvas">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold">{fullName(s.student)}</span>
+                      <PersonName name={fullName(s.student)} className="font-semibold" />
                       <SubscriptionStatusBadge status={s.status} />
                     </div>
                     <p className="truncate text-sm">{s.plan.name}</p>

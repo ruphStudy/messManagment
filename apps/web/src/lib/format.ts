@@ -1,13 +1,23 @@
 const dateFormat = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 const dateTimeFormat = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 
-/** "2026-09-01" → "1 Sep 2026" (calendar date, no timezone shift). */
-export function formatDate(value: string) {
-  return dateFormat.format(new Date(`${value}T00:00:00Z`));
+const timestampDateFormat = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
+
+/** Shown instead of crashing when an optional value is missing or malformed. */
+const safe = (fmt: Intl.DateTimeFormat, d: Date) => (Number.isNaN(d.getTime()) ? '—' : fmt.format(d));
+
+/** "2026-09-01" → "1 Sep 2026" (calendar date, no timezone shift). Only for date-only values, not timestamps. */
+export function formatDate(value: string | null | undefined) {
+  return value ? safe(dateFormat, new Date(`${value}T00:00:00Z`)) : '—';
 }
 
-export function formatDateTime(value: string) {
-  return dateTimeFormat.format(new Date(value));
+/** ISO timestamp (createdAt, addedAt…) → its Indian calendar date, e.g. "9 Oct 2026". */
+export function formatTimestampDate(value: string | null | undefined) {
+  return value ? safe(timestampDateFormat, new Date(value)) : '—';
+}
+
+export function formatDateTime(value: string | null | undefined) {
+  return value ? safe(dateTimeFormat, new Date(value)) : '—';
 }
 
 export function formatMobile(mobile: string) {

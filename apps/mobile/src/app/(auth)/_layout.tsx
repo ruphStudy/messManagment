@@ -14,6 +14,9 @@ export default function AuthLayout() {
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="otp" />
+      <Stack.Screen name="password" />
+      <Stack.Screen name="signup" />
+      <Stack.Screen name="register-owner" />
     </Stack>
   );
 }

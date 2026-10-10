@@ -58,6 +58,8 @@ export interface AppNotification {
   data: NotificationData | null;
   readAt: string | null;
   createdAt: string;
+  /** Mess the notification is about (student apps switch to it before opening); null = account-wide. */
+  messId: string | null;
 }
 
 export interface NotificationListQuery extends PaginationQuery {

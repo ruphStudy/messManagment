@@ -13,6 +13,7 @@ import { Select } from '@/components/ui/select';
 import { formatDateTime, fullName } from '@/lib/format';
 import { useListParams } from '@/lib/use-list-params';
 import { usePagedList } from '@/lib/use-paged-list';
+import { PersonName } from '@/components/ui/avatar';
 
 const FILTERS = ['status', 'category', 'messId', 'from', 'to'];
 
@@ -51,7 +52,7 @@ function ComplaintsScreen() {
             columns={[
               { header: 'Created', cell: (c) => formatDateTime(c.createdAt), className: 'whitespace-nowrap' },
               { header: 'Mess', cell: (c) => <Link href={`/admin/messes/${c.mess.id}`} className="relative z-10 text-brand-700 hover:underline">{c.mess.name}</Link> },
-              { header: 'Student', cell: (c) => fullName(c.student) },
+              { header: 'Student', cell: (c) => <PersonName name={fullName(c.student)} /> },
               { header: 'Category', cell: (c) => COMPLAINT_CATEGORY_LABELS[c.category] },
               { header: 'Status', cell: (c) => <ComplaintStatusBadge status={c.status} /> },
               { header: 'Description', cell: (c) => <span className="line-clamp-2 max-w-72">{c.description}</span> },

@@ -16,7 +16,7 @@ import {
 } from '@mess/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AppException } from '../../common/http/app.exception';
-import { fromDateString } from '../../common/http/dates';
+import { timestampRange } from '../../common/http/dates';
 import { Paginated } from '../../common/http/pagination';
 import { FilesService } from '../files/files.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -157,11 +157,8 @@ export class ComplaintsService {
       messId,
       status: query.status,
       category: query.category,
-      createdAt: {
-        ...(query.from ? { gte: fromDateString(query.from) } : {}),
-        // `to` is inclusive of that whole (UTC-stored) day.
-        ...(query.to ? { lt: new Date(fromDateString(query.to).getTime() + 86_400_000) } : {}),
-      },
+      // Business (IST) days, `to` inclusive.
+      createdAt: timestampRange(query.from, query.to),
       ...(query.search ? { student: { AND: studentSearchTerms(query.search) } } : {}),
     };
   }

@@ -21,7 +21,7 @@ export interface PushProvider {
 export class LogPushProvider implements PushProvider {
   private readonly logger = new Logger('Push');
   async send(messages: PushMessage[]): Promise<PushResult[]> {
-    for (const m of messages) this.logger.log(`→ ${m.to.slice(0, 26)}… "${m.title}"`);
+    for (const m of messages) this.logger.log(`→ ${m.to.slice(0, 22)}… "${m.title}"`);
     return messages.map(() => ({ ok: true }));
   }
 }

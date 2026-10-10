@@ -1,3 +1,4 @@
+import type { MessStatus } from './enums';
 import type { PaginationQuery } from './api';
 
 export const StudentStatus = {
@@ -81,7 +82,8 @@ export type StudentSelfUpdate = Pick<StudentInput, (typeof STUDENT_SELF_EDITABLE
 export interface StudentSelfProfile extends Omit<StudentInput, 'notes'> {
   id: string;
   status: StudentStatus;
-  mess: { id: string; name: string; mobile: string; city: string };
+  /** status SUSPENDED: the platform paused this mess — history readable, actions (QR, pause, feedback) blocked. */
+  mess: { id: string; name: string; mobile: string; city: string; status: MessStatus };
 }
 
 export type StudentMeResponse = { linked: false } | { linked: true; profile: StudentSelfProfile };

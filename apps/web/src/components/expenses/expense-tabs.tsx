@@ -15,7 +15,7 @@ export function ExpenseTabs({ active }: { active: string }) {
           key={t.href}
           href={t.href}
           aria-current={active === t.href ? 'page' : undefined}
-          className={cn('inline-flex min-h-10 shrink-0 items-center rounded-full px-4 text-sm font-semibold', active === t.href ? 'bg-ink text-white' : 'border border-border bg-surface text-ink-muted hover:bg-canvas')}
+          className={cn('inline-flex min-h-10 shrink-0 items-center rounded-full px-4 text-sm font-semibold', active === t.href ? 'bg-ink text-white dark:text-canvas' : 'border border-border bg-surface text-ink-muted hover:bg-canvas')}
         >
           {t.label}
         </Link>

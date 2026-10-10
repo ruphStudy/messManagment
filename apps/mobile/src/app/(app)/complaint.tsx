@@ -7,7 +7,7 @@ import { Card, Screen } from '@/components/layout';
 import { EmptyState, ErrorState, FullScreenLoader } from '@/components/states';
 import { AppText } from '@/components/text';
 import { api, ApiError, authorizedFileSource, errorMessage } from '@/lib/api';
-import { colors, radius, spacing } from '@/theme/tokens';
+import { colors, radius, spacing, themed } from '@/theme/tokens';
 
 const timeFormat = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 const when = (iso: string) => timeFormat.format(new Date(iso));
@@ -84,11 +84,11 @@ function TimelineItem({ title, time }: { title: string; time: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   photo: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.control, marginTop: spacing.sm, backgroundColor: colors.canvas },
   message: { borderRadius: radius.control, padding: spacing.md, gap: 2 },
   fromMess: { backgroundColor: colors.brand50 },
   fromMe: { backgroundColor: colors.canvas },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.brand500 },
-});
+}));

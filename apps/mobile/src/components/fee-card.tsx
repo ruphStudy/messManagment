@@ -1,16 +1,16 @@
 import { StyleSheet, View } from 'react-native';
 import { formatPaise, PAYMENT_STATUS_LABELS, type SubscriptionPaymentStatus, type SubscriptionSummary } from '@mess/shared';
 import { formatDate } from '@/lib/student-profile';
-import { colors, radius, spacing } from '@/theme/tokens';
+import { colors, radius, spacing, themed } from '@/theme/tokens';
 import { Card } from './layout';
 import { StatusPill } from './subscription-card';
 import { AppText } from './text';
 
-const PAY_COLORS: Record<SubscriptionPaymentStatus, { bg: string; fg: string }> = {
+const PAY_COLORS: Record<SubscriptionPaymentStatus, { bg: string; fg: string }> = themed(() => ({
   PAID: { bg: colors.successSoft, fg: colors.success },
   PARTIAL: { bg: colors.brand100, fg: colors.brand700 },
   UNPAID: { bg: colors.dangerSoft, fg: colors.danger },
-};
+}));
 
 export function PaymentPill({ status }: { status: SubscriptionPaymentStatus }) {
   const c = PAY_COLORS[status];

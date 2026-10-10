@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatDate, formatMobile, fullName } from '@/lib/format';
 import { PaymentStatusBadge } from './payment-badges';
+import { PersonName } from '@/components/ui/avatar';
 
 /** Subscriptions with fee / paid / due — used by Pending dues and Monthly status. */
 interface DueListProps {
@@ -35,7 +36,7 @@ export function DueList({ items, onRecord, onRemind, selected, onToggle }: DueLi
             )}
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <Link href={`/students/${d.student.id}`} className="font-semibold hover:underline">{fullName(d.student)}</Link>
+                <PersonName name={fullName(d.student)}><Link href={`/students/${d.student.id}`} className="font-semibold hover:underline">{fullName(d.student)}</Link></PersonName>
                 <PaymentStatusBadge status={d.payment.status} />
                 <SubscriptionStatusBadge status={d.subscriptionStatus} />
               </div>

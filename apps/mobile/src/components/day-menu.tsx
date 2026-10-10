@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MEAL_KEYS, MEAL_LABELS, type MealKey, type PublishedMenu } from '@mess/shared';
-import { colors, spacing } from '@/theme/tokens';
+import { colors, spacing, themed } from '@/theme/tokens';
 import { Card } from './layout';
 import { EmptyState } from './states';
 import { AppText } from './text';
@@ -80,11 +80,11 @@ export function DayMenu({ menu, served, dayLabel }: DayMenuProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   flex: { flex: 1 },
   items: { gap: spacing.xs },
   itemRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.brand500 },
   note: { backgroundColor: colors.brand50, borderColor: colors.brand100 },
-});
+}));

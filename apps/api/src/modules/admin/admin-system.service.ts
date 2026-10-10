@@ -1,19 +1,11 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { Inject, Injectable } from '@nestjs/common';
 import { PushStatus } from '@prisma/client';
 import type { SystemStatus } from '@mess/shared';
 import { APP_CONFIG, AppConfig } from '../../config/app-config';
+import { APP_VERSION } from '../../config/app-version';
 import { PrismaService } from '../../prisma/prisma.service';
 
-function apiVersion(): string {
-  try {
-    return (JSON.parse(readFileSync(join(__dirname, '../../../package.json'), 'utf8')) as { version?: string }).version ?? 'unknown';
-  } catch {
-    return 'unknown';
-  }
-}
-const VERSION = apiVersion();
+const VERSION = APP_VERSION;
 
 /**
  * Informational status only. Reports modes and booleans — never URLs, paths, tokens, secrets or env values.

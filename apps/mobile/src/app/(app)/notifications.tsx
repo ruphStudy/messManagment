@@ -8,7 +8,7 @@ import { EmptyState, ErrorState, FullScreenLoader } from '@/components/states';
 import { AppText } from '@/components/text';
 import { api, apiEnvelope, errorMessage } from '@/lib/api';
 import { openNotificationTarget, useNotifications } from '@/lib/notifications';
-import { colors, spacing, TOUCH_TARGET } from '@/theme/tokens';
+import { colors, spacing, TOUCH_TARGET, themed } from '@/theme/tokens';
 
 const ICONS: Record<NotificationType, keyof typeof Ionicons.glyphMap> = {
   PAYMENT_DUE: 'wallet-outline',
@@ -55,7 +55,7 @@ export default function NotificationsScreen() {
       setItems((all) => all.map((x) => (x.id === n.id ? { ...x, readAt: new Date().toISOString() } : x)));
       void markRead(n.id);
     }
-    openNotificationTarget(n.data);
+    openNotificationTarget({ ...(n.data ?? {}), messId: n.messId ?? undefined });
   };
 
   const readAll = async () => {
@@ -99,10 +99,10 @@ export default function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   list: { padding: spacing.xl, gap: spacing.md, flexGrow: 1 },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, minHeight: TOUCH_TARGET },
   unread: { borderColor: colors.brand100, backgroundColor: colors.brand50 },
   flex: { flex: 1, gap: 2 },
   dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.brand600, marginTop: 6 },
-});
+}));

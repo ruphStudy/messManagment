@@ -85,6 +85,9 @@ export default function QrScreen() {
       </Screen>
     );
   }
+  if (data.state === 'MESS_UNAVAILABLE') {
+    return <EmptyState icon="pause-circle-outline" title="Mess temporarily unavailable" description={`${data.messName} is paused by the platform for now, so meal QR codes are not available. Your history is safe.`} />;
+  }
   if (data.state === 'INACTIVE') {
     return <EmptyState icon="person-remove-outline" title="Your membership is inactive" description={`Please contact ${data.messName} to activate it.`} />;
   }
@@ -102,7 +105,8 @@ export default function QrScreen() {
         <AppText variant="title">{data.studentName}</AppText>
         <AppText muted>{data.messName} · {data.planName}</AppText>
         <View style={[styles.qrBox, expired && { opacity: 0.15 }]} accessibilityLabel="Your meal QR code">
-          <QRCode value={data.token} size={size} ecl="M" quietZone={12} backgroundColor="#fff" color={colors.ink} />
+          {/* Always dark-on-white (both themes) so it scans reliably. */}
+          <QRCode value={data.token} size={size} ecl="M" quietZone={12} backgroundColor="#ffffff" color="#0f172a" />
         </View>
         <AppText variant="label" style={{ color: expired ? colors.danger : colors.inkMuted }}>
           {expired || loading ? 'Refreshing…' : `Refreshes in ${secondsLeft}s`}

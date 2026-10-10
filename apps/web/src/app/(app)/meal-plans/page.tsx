@@ -69,7 +69,7 @@ export default function MealPlansPage() {
 
   const filtered = !!(status || search);
   const addButton = canManage && (
-    <Link href="/meal-plans/new" className={`${linkButton} bg-brand-600 text-white hover:bg-brand-700`}>
+    <Link href="/meal-plans/new" className={`${linkButton} bg-brand-600 text-white hover:bg-brand-700 dark:hover:bg-brand-500`}>
       <Plus className="size-4" aria-hidden /> Create meal plan
     </Link>
   );

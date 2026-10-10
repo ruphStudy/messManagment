@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import type { User } from '@prisma/client';
 import { ErrorCode } from '@mess/shared';
 import { PrismaService } from '../../prisma/prisma.service';
+import { selectedStudentMessId } from '../../common/http/student-mess-context';
+import { pickStudentRecord } from '../students/student-selection';
 import { AppException } from '../../common/http/app.exception';
 import type { ActiveMembership, RequestAuth } from '../../common/auth.types';
 
@@ -38,14 +40,14 @@ export class AuthContextService {
     }
   }
 
-  /** Whether the mess of the student's own record (same pick as StudentsService.resolveSelf) is suspended. */
+  /** Whether the mess of the student record this request uses (same pick as StudentsService.resolveSelf) is suspended. */
   async studentMessSuspended(userId: string): Promise<boolean> {
-    const student = await this.prisma.messStudent.findFirst({
+    const records = await this.prisma.messStudent.findMany({
       where: { userId, status: { not: 'ARCHIVED' } },
       orderBy: [{ status: 'asc' }, { joiningDate: 'desc' }],
-      select: { mess: { select: { status: true } } },
+      select: { messId: true, status: true, mess: { select: { status: true } } },
     });
-    return student?.mess.status === 'SUSPENDED';
+    return pickStudentRecord(records, selectedStudentMessId())?.mess.status === 'SUSPENDED';
   }
 
   /** MVP: a user works in one mess at a time — the earliest active membership. */

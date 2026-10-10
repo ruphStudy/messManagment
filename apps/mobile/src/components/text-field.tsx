@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
-import { colors, radius, spacing, TOUCH_TARGET } from '@/theme/tokens';
+import { colors, radius, spacing, TOUCH_TARGET, themed } from '@/theme/tokens';
 import { AppText } from './text';
 
 interface TextFieldProps extends TextInputProps {
@@ -41,7 +41,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
   );
 });
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   wrapper: { gap: spacing.xs + 2 },
   box: {
     flexDirection: 'row',
@@ -56,4 +56,4 @@ const styles = StyleSheet.create({
   boxError: { borderColor: colors.danger },
   prefix: { marginRight: spacing.sm, fontSize: 18 },
   input: { flex: 1, fontSize: 18, color: colors.ink, paddingVertical: spacing.md },
-});
+}));

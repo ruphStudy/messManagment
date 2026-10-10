@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/loader';
 import { formatDate, formatMobile, fullName } from '@/lib/format';
 import { AppLinkBadge, StudentStatusBadge } from './student-badges';
+import { PersonName } from '@/components/ui/avatar';
 
 const studyLine = (s: StudentListItem) => [s.collegeName, s.hostelOrPg].filter(Boolean).join(' · ');
 
@@ -32,7 +33,7 @@ export function StudentList({ students }: { students: StudentListItem[] }) {
           <tbody className="divide-y divide-border">
             {students.map((s) => (
               <tr key={s.id} onClick={() => router.push(`/students/${s.id}`)} className="cursor-pointer hover:bg-canvas">
-                <td className="px-4 py-3 font-semibold">{fullName(s)}</td>
+                <td className="px-4 py-3 font-semibold"><PersonName name={fullName(s)} /></td>
                 <td className="whitespace-nowrap px-4 py-3">{formatMobile(s.mobile)}</td>
                 <td className="hidden max-w-56 truncate px-4 py-3 text-ink-muted lg:table-cell">{studyLine(s) || '—'}</td>
                 <td className="whitespace-nowrap px-4 py-3">{formatDate(s.joiningDate)}</td>
@@ -55,7 +56,7 @@ export function StudentList({ students }: { students: StudentListItem[] }) {
             <Link href={`/students/${s.id}`} className="flex items-center gap-3 rounded-card border border-border bg-surface p-4 active:bg-canvas">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold">{fullName(s)}</span>
+                  <PersonName name={fullName(s)} className="font-semibold" />
                   <StudentStatusBadge status={s.status} />
                 </div>
                 <p className="mt-0.5 text-sm text-ink-muted">{formatMobile(s.mobile)}</p>

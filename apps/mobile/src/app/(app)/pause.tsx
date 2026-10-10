@@ -25,7 +25,7 @@ import { api, apiEnvelope, errorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { usePauseSettings } from '@/lib/use-pause-settings';
 import { menuDayLabel } from '@/lib/use-student-menu';
-import { colors, radius, spacing, TOUCH_TARGET } from '@/theme/tokens';
+import { colors, radius, spacing, TOUCH_TARGET, themed } from '@/theme/tokens';
 
 type Tab = 'new' | 'upcoming' | 'history';
 type Settings = Extract<StudentPauseSettings, { linked: true }>;
@@ -302,7 +302,7 @@ export default function PauseScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   segments: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, padding: 4 },
   segment: { flex: 1, minHeight: TOUCH_TARGET - 8, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   segmentActive: { backgroundColor: colors.brand600 },
@@ -312,4 +312,4 @@ const styles = StyleSheet.create({
   chipOn: { backgroundColor: colors.brand600, borderColor: colors.brand600 },
   input: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.control, minHeight: TOUCH_TARGET, paddingHorizontal: spacing.md, fontSize: 16, color: colors.ink },
   pauseRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: TOUCH_TARGET },
-});
+}));

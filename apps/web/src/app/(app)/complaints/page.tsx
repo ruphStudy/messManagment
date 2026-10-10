@@ -14,6 +14,7 @@ import {
   type ComplaintCounts,
   type ComplaintListItem,
 } from '@mess/shared';
+import { PersonName } from '@/components/ui/avatar';
 import { ComplaintStatusBadge } from '@/components/feedback/complaint-badges';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/loader';
@@ -102,7 +103,7 @@ function ComplaintsScreen() {
                     <div className="flex flex-wrap items-center gap-2">
                       <ComplaintStatusBadge status={c.status} />
                       <span className="font-semibold">{COMPLAINT_CATEGORY_LABELS[c.category]}</span>
-                      <span className="text-sm text-ink-muted">{fullName(c.student)} · {formatDateTime(c.createdAt)}</span>
+                      <PersonName name={fullName(c.student)} className="text-sm text-ink-muted">{fullName(c.student)} · {formatDateTime(c.createdAt)}</PersonName>
                       {c.hasAttachment && <ImageIcon className="size-4 text-ink-muted" aria-label="Has photo" />}
                     </div>
                     <p className="mt-1 line-clamp-2 text-sm">{c.description}</p>

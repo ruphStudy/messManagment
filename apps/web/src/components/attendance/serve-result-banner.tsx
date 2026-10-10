@@ -8,7 +8,7 @@ export type BannerState = { kind: 'result'; result: ServeResult } | { kind: 'net
 export function ServeResultBanner({ state }: { state: BannerState }) {
   if (state.kind === 'network') {
     return (
-      <div role="alert" className="flex items-center gap-3 rounded-card bg-ink p-4 text-white">
+      <div role="alert" className="flex items-center gap-3 rounded-card bg-ink p-4 text-white dark:text-canvas">
         <WifiOff className="size-8 shrink-0" aria-hidden />
         <div>
           <p className="text-lg font-bold">Unable to verify meal</p>

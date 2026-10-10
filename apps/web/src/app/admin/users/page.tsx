@@ -11,9 +11,10 @@ import { PageHeader } from '@/components/ui/page-header';
 import { SearchInput } from '@/components/ui/search-input';
 import { Select } from '@/components/ui/select';
 import { USER_STATUS_UI } from '@/lib/admin';
-import { formatDate } from '@/lib/format';
+import { formatTimestampDate } from '@/lib/format';
 import { useListParams } from '@/lib/use-list-params';
 import { usePagedList } from '@/lib/use-paged-list';
+import { PersonName } from '@/components/ui/avatar';
 
 const FILTERS = ['role', 'status', 'messId'];
 
@@ -43,7 +44,7 @@ function UsersScreen() {
             rowKey={(u) => u.id}
             rowHref={(u) => `/admin/users/${u.id}`}
             columns={[
-              { header: 'Name', cell: (u) => u.name || '(no name yet)' },
+              { header: 'Name', cell: (u) => <PersonName name={u.name}>{u.name || '(no name yet)'}</PersonName> },
               { header: 'Mobile / email', cell: (u) => <>{u.mobile}{u.email && <span className="block text-xs text-ink-muted">{u.email}</span>}</> },
               { header: 'Role', cell: (u) => ROLE_LABELS[u.role] },
               {
@@ -56,7 +57,7 @@ function UsersScreen() {
                   ),
               },
               { header: 'Account', cell: (u) => <Badge tone={USER_STATUS_UI[u.status].tone}>{USER_STATUS_UI[u.status].label}</Badge> },
-              { header: 'Created', cell: (u) => formatDate(u.createdAt), className: 'whitespace-nowrap' },
+              { header: 'Created', cell: (u) => formatTimestampDate(u.createdAt), className: 'whitespace-nowrap' },
             ]}
           />
         )}

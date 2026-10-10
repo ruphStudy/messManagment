@@ -167,7 +167,8 @@ export class AttendanceService {
     const student = await this.students.resolveSelf(user);
     if (!student) return { state: 'NOT_LINKED' };
     // A suspended mess serves no meals, so no QR either.
-    if (student.status !== StudentStatus.ACTIVE || student.mess.status !== 'ACTIVE') return { state: 'INACTIVE', messName: student.mess.name };
+    if (student.mess.status !== 'ACTIVE') return { state: 'MESS_UNAVAILABLE', messName: student.mess.name };
+    if (student.status !== StudentStatus.ACTIVE) return { state: 'INACTIVE', messName: student.mess.name };
 
     const today = businessToday();
     const studentName = [student.firstName, student.lastName].filter(Boolean).join(' ');

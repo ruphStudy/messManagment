@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { NotificationBell } from '@/components/notification-bell';
 import { NotificationsProvider } from '@/lib/notifications';
 import { StudentProfileProvider } from '@/lib/student-profile';
+import { StudentMessProvider, useStudentMess } from '@/lib/student-mess';
+import { MessChooser } from '@/components/mess-chooser';
 import { colors } from '@/theme/tokens';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -20,7 +22,18 @@ const TABS: { name: string; title: string; icon: IconName }[] = [
 
 export default function AppTabsLayout() {
   return (
-    <StudentProfileProvider>
+    <StudentMessProvider>
+      <StudentTabs />
+    </StudentMessProvider>
+  );
+}
+
+/** Tabs for the selected mess (re-mounted on switch so every screen reloads); the chooser when needed. */
+function StudentTabs() {
+  const { showChooser, current } = useStudentMess();
+  if (showChooser) return <MessChooser />;
+  return (
+    <StudentProfileProvider key={current?.messId ?? 'none'}>
     <NotificationsProvider>
     <Tabs
       screenOptions={{
@@ -42,7 +55,7 @@ export default function AppTabsLayout() {
       ))}
       {/* Not tabs: opened from Home / QR / Profile. */}
       {[
-        { name: 'plans', title: 'Plan history' },
+        { name: 'plans', title: 'Meal plans' },
         { name: 'attendance', title: 'Meal history' },
         { name: 'receipt', title: 'Receipt' },
         { name: 'notifications', title: 'Notifications' },

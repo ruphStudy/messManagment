@@ -15,6 +15,7 @@ import {
   type FeedbackItem,
   type RatingSummary,
 } from '@mess/shared';
+import { PersonName } from '@/components/ui/avatar';
 import { RatingSummaryCards } from '@/components/feedback/rating-summary-cards';
 import { Stars } from '@/components/feedback/stars';
 import { Badge } from '@/components/ui/badge';
@@ -79,7 +80,7 @@ function FeedbackScreen() {
 
       <nav aria-label="Feedback type" className="mb-4 inline-flex gap-1 rounded-full border border-border bg-surface p-1">
         {[{ key: FeedbackType.MEAL, label: 'Meal ratings' }, { key: FeedbackType.GENERAL, label: 'General feedback' }].map((t) => (
-          <button key={t.key} onClick={() => list.setParams({ type: t.key, page: 1 })} aria-current={type === t.key ? 'page' : undefined} className={cn('min-h-10 rounded-full px-4 text-sm font-semibold', type === t.key ? 'bg-ink text-white' : 'text-ink-muted hover:bg-slate-100')}>
+          <button key={t.key} onClick={() => list.setParams({ type: t.key, page: 1 })} aria-current={type === t.key ? 'page' : undefined} className={cn('min-h-10 rounded-full px-4 text-sm font-semibold', type === t.key ? 'bg-ink text-white dark:text-canvas' : 'text-ink-muted hover:bg-slate-100')}>
             {t.label}
           </button>
         ))}
@@ -107,7 +108,7 @@ function FeedbackScreen() {
               <li key={f.id}>
                 <Card className="p-4 sm:p-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold">{fullName(f.student)}</span>
+                    <PersonName name={fullName(f.student)} className="font-semibold" />
                     <span className="text-sm text-ink-muted">{formatDate(f.date)}{f.mealType && ` · ${MEAL_LABELS[f.mealType]}`}</span>
                     <Stars value={f.overallRating} />
                     {f.mealReversed && <Badge>Meal reversed — not counted</Badge>}

@@ -4,7 +4,7 @@ import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { API_PREFIX, AuthContext, AuthResponse, CLIENT_HEADER, ClientType } from '@mess/shared';
 import { APP_CONFIG, AppConfig } from '../../config/app-config';
-import { CurrentAuth, Public } from '../../common/decorators/auth.decorators';
+import { AllowDuringPasswordChange, CurrentAuth, Public } from '../../common/decorators/auth.decorators';
 import type { RequestAuth } from '../../common/auth.types';
 import { toAuthContext } from '../users/user.mapper';
 import { AuthResult, AuthService } from './auth.service';
@@ -31,11 +31,25 @@ export class AuthController {
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
+  /**
+   * Public signup has exactly two intents (shared `SignupIntent`); there is no role field, and the strict DTOs
+   * reject any extra property (role, messId…). OWNER creates a MESS_OWNER account with no mess — ownership
+   * only ever comes from creating a NEW mess (POST /mess). `register` is kept for existing clients.
+   */
   @Public()
   @Throttle(STRICT_LIMIT)
-  @Post('register')
+  @Post(['register', 'register/owner'])
   register(@Body() dto: RegisterOwnerDto) {
     return this.auth.registerOwner(dto);
+  }
+
+  /** STUDENT signup = OTP verification (creates or reuses the account and links matching mess records). Same as otp/verify. */
+  @Public()
+  @Throttle(STRICT_LIMIT)
+  @Post('register/student')
+  @HttpCode(HttpStatus.OK)
+  async registerStudent(@Body() dto: VerifyOtpDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    return this.deliver(await this.auth.verifyStudentOtp(dto.mobile, dto.code, this.meta(req)), req, res);
   }
 
   @Public()
@@ -85,9 +99,10 @@ export class AuthController {
   }
 
   @ApiBearerAuth()
+  @AllowDuringPasswordChange()
   @Get('me')
-  me(@CurrentAuth() auth: RequestAuth): AuthContext {
-    return toAuthContext(auth);
+  me(@CurrentAuth() auth: RequestAuth): Promise<AuthContext> {
+    return this.auth.describe(toAuthContext(auth));
   }
 
   /** Own name/email (team accounts). Role, mobile and status are not editable here. */
@@ -98,6 +113,7 @@ export class AuthController {
   }
 
   @ApiBearerAuth()
+  @AllowDuringPasswordChange()
   @Throttle(STRICT_LIMIT)
   @Post('change-password')
   @HttpCode(HttpStatus.OK)

@@ -136,7 +136,7 @@ function Scanner({ meals, times }: { meals: MealType[]; times: MealServingTimes 
           </div>
         )}
         {verifying && (
-          <div className="absolute inset-x-0 top-0 flex items-center justify-center gap-2 bg-ink/80 py-2 text-sm text-white">
+          <div className="absolute inset-x-0 top-0 flex items-center justify-center gap-2 bg-black/70 py-2 text-sm text-white">
             <Loader2 className="size-4 animate-spin" aria-hidden /> Verifying…
           </div>
         )}

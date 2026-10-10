@@ -8,9 +8,16 @@ export const IS_PUBLIC_KEY = 'auth:public';
 export const ROLES_KEY = 'auth:roles';
 export const PERMISSIONS_KEY = 'auth:permissions';
 export const REQUIRE_MESS_KEY = 'auth:requireMess';
+export const ALLOW_PENDING_PASSWORD_KEY = 'auth:allowPendingPassword';
 
 /** Skips authentication for the route. */
 export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
+
+/**
+ * Reachable while the account still has a temporary password (mustChangePassword). Everything else is
+ * blocked with PASSWORD_CHANGE_REQUIRED until the password is changed. Use only for the change flow itself.
+ */
+export const AllowDuringPasswordChange = () => SetMetadata(ALLOW_PENDING_PASSWORD_KEY, true);
 
 /** Allows only the given effective roles. */
 export const Roles = (...roles: Role[]) => applyDecorators(SetMetadata(ROLES_KEY, roles), ApiBearerAuth());

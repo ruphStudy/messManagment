@@ -158,8 +158,10 @@ enum MessType {
   OTHER
 }
 
+/// VEG = Veg only, NON_VEG = Non-veg only, VEG_NON_VEG = both. Informational only.
 enum FoodType {
   VEG
+  NON_VEG
   VEG_NON_VEG
 }
 
@@ -263,6 +265,8 @@ model Mess {
   complaints        Complaint[]
   files             StoredFile[]
   auditLogs         AuditLog[]
+  planRequests      PlanRequest[]
+  platformSubscriptions PlatformSubscription[]
 
   @@index([ownerId])
   @@map("messes")
@@ -366,6 +370,7 @@ model MessStudent {
   @@index([mobile])
   @@index([userId])
   @@map("mess_students")
+  planRequests PlanRequest[]
 }
 
 /// A reusable plan configuration offered by a mess. Never deleted once used; deactivate instead.
@@ -389,6 +394,7 @@ model MealPlan {
 
   mess          Mess                  @relation(fields: [messId], references: [id], onDelete: Cascade)
   subscriptions StudentSubscription[]
+  planRequests PlanRequest[]
 
   @@index([messId, status])
   @@map("meal_plans")
@@ -396,6 +402,79 @@ model MealPlan {
 
 /// A dated assignment of a plan to a student. Plan details are snapshotted so later plan edits never rewrite history.
 /// Status is derived from dates (UPCOMING / ACTIVE / EXPIRED); only cancellation is stored.
+enum PlatformSubscriptionStatus {
+  PENDING_PAYMENT
+  TRIAL
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+/// MessMate (SaaS) access for a mess — NOT student meal payments. One row per period/change (history kept);
+/// the newest row is the current state. Recorded manually by a platform admin (no gateway yet).
+model PlatformSubscription {
+  id               String                     @id @default(uuid()) @db.Uuid
+  messId           String                     @db.Uuid
+  status           PlatformSubscriptionStatus
+  planName         String                     @db.VarChar(80)
+  billingCycle     BillingCycle?
+  amountPaise      Int                        @default(0)
+  /// Paid period (ACTIVE). Null while pending/trial.
+  startDate        DateTime?                  @db.Date
+  endDate          DateTime?                  @db.Date
+  trialStartDate   DateTime?                  @db.Date
+  trialEndDate     DateTime?                  @db.Date
+  paymentReference String?                    @db.VarChar(120)
+  notes            String?                    @db.VarChar(300)
+  createdById      String?                    @db.Uuid
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
+
+  mess Mess @relation(fields: [messId], references: [id], onDelete: Cascade)
+
+  @@index([messId, createdAt])
+  @@map("platform_subscriptions")
+}
+
+enum PlanRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+/// A student asking for a meal plan; the owner/manager approves (→ a normal subscription) or rejects.
+/// At most one PENDING request per student (partial unique index in SQL).
+model PlanRequest {
+  id             String            @id @default(uuid()) @db.Uuid
+  messId         String            @db.Uuid
+  studentId      String            @db.Uuid
+  mealPlanId     String            @db.Uuid
+  status         PlanRequestStatus @default(PENDING)
+  /// Snapshot so history still reads correctly if the plan is edited later.
+  planName       String            @db.VarChar(80)
+  planPricePaise Int
+  decidedById    String?           @db.Uuid
+  decidedAt      DateTime?
+  rejectReason   String?           @db.VarChar(200)
+  subscriptionId String?           @db.Uuid
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  mess     Mess        @relation(fields: [messId], references: [id], onDelete: Cascade)
+  student  MessStudent @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  mealPlan MealPlan    @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+
+  @@index([messId, status, createdAt])
+  @@index([studentId, createdAt])
+  @@map("plan_requests")
+}
+
 model StudentSubscription {
   id                   String           @id @default(uuid()) @db.Uuid
   messId               String           @db.Uuid
