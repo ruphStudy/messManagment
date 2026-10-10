@@ -6,6 +6,7 @@ import { resolveSession } from '@mess/shared';
 import { TeamHeaderActions } from '@/components/team/header-actions';
 import { useAuth } from '@/lib/auth';
 import { NotificationsProvider } from '@/lib/notifications';
+import { tabScreenOptions } from '@/theme/navigation';
 import { colors } from '@/theme/tokens';
 import PasswordChangeScreen from '@/components/team/password-change';
 import NoContextScreen from '@/components/team/no-context';
@@ -66,12 +67,7 @@ export default function TeamLayout() {
     <NotificationsProvider area="team">
       <Tabs
         screenOptions={{
-          headerShadowVisible: false,
-          headerStyle: { backgroundColor: colors.canvas },
-          headerTitleStyle: { fontWeight: '700' },
-          tabBarActiveTintColor: colors.brand600,
-          tabBarInactiveTintColor: colors.inkMuted,
-          tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
+          ...tabScreenOptions(),
           headerRight: () => <TeamHeaderActions />,
         }}
       >

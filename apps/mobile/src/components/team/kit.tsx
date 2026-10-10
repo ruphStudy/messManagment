@@ -1,23 +1,24 @@
 import type { ComponentProps, ReactNode } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing, TOUCH_TARGET, themed } from '@/theme/tokens';
 import { Avatar } from '../avatar';
 import { Card } from '../layout';
 import { AppText } from '../text';
 
-type Tone = 'success' | 'danger' | 'info' | 'brand' | 'neutral';
+type Tone = 'success' | 'danger' | 'info' | 'brand' | 'neutral' | 'warning';
 const TONES: Record<Tone, { bg: string; fg: string }> = themed(() => ({
   success: { bg: colors.successSoft, fg: colors.success },
   danger: { bg: colors.dangerSoft, fg: colors.danger },
   info: { bg: colors.infoSoft, fg: colors.info },
   brand: { bg: colors.brand100, fg: colors.brand700 },
   neutral: { bg: colors.canvas, fg: colors.inkMuted },
+  warning: { bg: colors.warningSoft, fg: colors.warning },
 }));
 
-export function Pill({ label, tone = 'neutral' }: { label: string; tone?: Tone }) {
+export function Pill({ label, tone = 'neutral', style }: { label: string; tone?: Tone; style?: StyleProp<ViewStyle> }) {
   return (
-    <View style={[styles.pill, { backgroundColor: TONES[tone].bg }]}>
+    <View style={[styles.pill, { backgroundColor: TONES[tone].bg }, style]}>
       <AppText variant="caption" style={{ color: TONES[tone].fg, fontWeight: '600' }}>{label}</AppText>
     </View>
   );
@@ -36,7 +37,15 @@ export function Row({ label, value }: { label: string; value: ReactNode }) {
 export function ListItem({ title, subtitle, right, onPress, icon, muted, avatar }: { title: string; subtitle?: string; right?: ReactNode; onPress?: () => void; icon?: ComponentProps<typeof Ionicons>['name']; muted?: boolean; /** Person name → initials circle (instead of an icon). */ avatar?: string }) {
   const body = (
     <Card style={styles.item}>
-      {avatar !== undefined ? <Avatar name={avatar} /> : icon && <Ionicons name={icon} size={22} color={muted ? colors.placeholder : colors.brand600} />}
+      {avatar !== undefined ? (
+        <Avatar name={avatar} />
+      ) : (
+        icon && (
+          <View style={styles.iconTile}>
+            <Ionicons name={icon} size={20} color={muted ? colors.placeholder : colors.brand600} />
+          </View>
+        )
+      )}
       <View style={{ flex: 1, gap: 2 }}>
         <AppText variant="label" style={[{ fontWeight: '600' }, muted && { color: colors.inkMuted, textDecorationLine: 'line-through' }]}>{title}</AppText>
         {subtitle ? <AppText variant="caption" muted>{subtitle}</AppText> : null}
@@ -94,10 +103,11 @@ export function SectionTitle({ children }: { children: string }) {
 }
 
 const styles = themed(() => StyleSheet.create({
-  pill: { borderRadius: radius.pill, paddingHorizontal: spacing.sm + 2, paddingVertical: 2, alignSelf: 'flex-start' },
+  pill: { borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 4, alignSelf: 'flex-start' },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 32 },
   value: { fontWeight: '600', flexShrink: 1, textAlign: 'right' },
   item: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
+  iconTile: { width: 38, height: 38, borderRadius: 12, backgroundColor: colors.iconBg, alignItems: 'center', justifyContent: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: { minHeight: 40, justifyContent: 'center', paddingHorizontal: spacing.md, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   chipOn: { backgroundColor: colors.brand600, borderColor: colors.brand600 },

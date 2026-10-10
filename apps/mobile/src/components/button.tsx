@@ -27,6 +27,7 @@ export function Button({ title, variant = 'primary', loading, disabled, style, .
       style={(state) => [
         styles.base,
         { backgroundColor: isDisabled && variant === 'primary' ? colors.disabled : p.bg, borderColor: p.border ?? 'transparent' },
+        variant === 'primary' && !isDisabled && { shadowColor: colors.brand600, shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 3 },
         state.pressed && { opacity: 0.85 },
         typeof style === 'function' ? style(state) : style,
       ]}
@@ -46,5 +47,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 20,
   },
-  label: { fontSize: 16, fontWeight: '600' },
+  label: { fontSize: 16, fontWeight: '700' },
 });

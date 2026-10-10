@@ -1,15 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useColorScheme } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { router, useGlobalSearchParams, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { DEFAULT_THEME, isThemePreference, resolveTheme, THEME_STORAGE_KEY, type ThemePreference } from '@mess/shared';
-import { colors, setActiveScheme } from './tokens';
+import { DEFAULT_THEME, isThemePreference, THEME_STORAGE_KEY, type ThemePreference } from '@mess/shared';
+import { colors, setActiveScheme, type Scheme } from './tokens';
+
+/** Mobile: the stored `system` value means the fixed MessMate Purple theme (it no longer follows the phone). */
+const SCHEME_FOR: Record<ThemePreference, Scheme> = { light: 'light', dark: 'dark', system: 'purple' };
 
 interface ThemeState {
   preference: ThemePreference;
-  resolved: 'light' | 'dark';
+  resolved: Scheme;
   setPreference(p: ThemePreference): void;
 }
 
@@ -20,9 +22,8 @@ const Ctx = createContext<ThemeState | null>(null);
  * On a theme switch the screen tree is re-rendered with the new palette and the current screen is reopened.
  */
 export function AppThemeProvider({ children }: { children: ReactNode }) {
-  const system = useColorScheme();
   const [preference, setPref] = useState<ThemePreference | null>(null);
-  const resolved = resolveTheme(preference ?? DEFAULT_THEME, system === 'dark');
+  const resolved = SCHEME_FOR[preference ?? DEFAULT_THEME];
   // Before children render, so every `colors.x` read during this render uses the right palette.
   setActiveScheme(resolved);
 
@@ -57,7 +58,7 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
 
   const navTheme = useMemo(() => {
     const base = resolved === 'dark' ? DarkTheme : DefaultTheme;
-    return { ...base, colors: { ...base.colors, primary: colors.brand600, background: colors.canvas, card: colors.canvas, text: colors.ink, border: colors.border } };
+    return { ...base, colors: { ...base.colors, primary: colors.brand600, background: colors.canvas, card: colors.canvas, text: colors.ink, border: colors.border, notification: colors.danger } };
   }, [resolved]);
 
   const value = useMemo(() => ({ preference: preference ?? DEFAULT_THEME, resolved, setPreference }), [preference, resolved, setPreference]);

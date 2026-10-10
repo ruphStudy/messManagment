@@ -7,6 +7,7 @@ import { NotificationsProvider } from '@/lib/notifications';
 import { StudentProfileProvider } from '@/lib/student-profile';
 import { StudentMessProvider, useStudentMess } from '@/lib/student-mess';
 import { MessChooser } from '@/components/mess-chooser';
+import { tabScreenOptions } from '@/theme/navigation';
 import { colors } from '@/theme/tokens';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -37,12 +38,7 @@ function StudentTabs() {
     <NotificationsProvider>
     <Tabs
       screenOptions={{
-        headerShadowVisible: false,
-        headerStyle: { backgroundColor: colors.canvas },
-        headerTitleStyle: { fontWeight: '700' },
-        tabBarActiveTintColor: colors.brand600,
-        tabBarInactiveTintColor: colors.inkMuted,
-        tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
+        ...tabScreenOptions(),
         headerRight: () => <NotificationBell />,
       }}
     >

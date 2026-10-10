@@ -28,7 +28,7 @@ export default function TeamBillingScreen() {
   return (
     <Screen edges={[]}>
       <Card>
-        <Pill label={PLATFORM_SUBSCRIPTION_STATUS_LABELS[data.status]} tone={head.tone === 'warning' ? 'info' : head.tone} />
+        <Pill label={PLATFORM_SUBSCRIPTION_STATUS_LABELS[data.status]} tone={head.tone} />
         <AppText style={{ marginTop: 8, fontWeight: '600', color: head.tone === 'danger' ? colors.danger : colors.ink }}>{head.text}</AppText>
       </Card>
       <Card>

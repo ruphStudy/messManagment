@@ -125,7 +125,7 @@ export default function TeamSettingsScreen() {
       <Card>
         <SectionTitle>Appearance</SectionTitle>
         <ThemeSelector />
-        <AppText variant="caption" muted>Saved on this device. System follows your phone setting.</AppText>
+        <AppText variant="caption" muted>Saved on this device. System uses the MessMate Purple appearance.</AppText>
       </Card>
       {(can(Permission.STAFF_VIEW) || showMess) && (
         <Card>

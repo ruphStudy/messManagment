@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, View, type ViewProps } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
-import { colors, radius, spacing, themed } from '@/theme/tokens';
+import { colors, elevation, radius, spacing, themed } from '@/theme/tokens';
 
 interface ScreenProps {
   children: ReactNode;
@@ -50,5 +50,6 @@ const styles = themed(() => StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.lg + 4,
     gap: spacing.sm,
+    ...elevation(1),
   },
 }));
